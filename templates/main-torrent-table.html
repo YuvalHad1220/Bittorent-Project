@@ -1,5 +1,5 @@
 <!--https://bulma.io/documentation/elements/table/-->
-<table class="table is-fullwidth is-hoverable">
+<table class="table is-fullwidth is-hoverable" id="torrentlist">
 
     <!-- row -->
     <tr>
@@ -20,7 +20,7 @@
         <th></th>
     </tr>
 
-    {% include 'main-torrent-block.html' %}
-    {% include 'main-torrent-block.html' %}
-
+    <script>
+    {% include 'fetch-torrent.js' %}
+    </script>
 </table>
