@@ -11,8 +11,6 @@ def ret_torrent_list():
     return [torrent().asdict() for _ in range(random.randint(0,240))]
 
 
-    return {'status': 'ok'}
-
 @app.route('/', methods = ["GET"])
 def homepage():
     title = "my torrent project"
