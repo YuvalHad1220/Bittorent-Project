@@ -54,47 +54,56 @@ row.insertCell(0).appendChild(checkbox_input)
 var keys = ['index', 'name', 'state', '_type', 'protocol', 'size', 'progress', 'download_speed', 'downloaded', 'upload_speed', 'uploaded', 'seeders', 'leechers']
 for (var i = 0; i<keys.length; i++){
     var current_cell = row.insertCell(i + 1);
-    var val_to_insert = "";
+    var node = document.createElement('p')
     var key = keys[i]
 
     switch(key){
+        case 'name':
+            node = document.createElement('a')
+            node.text = torrent_dict['name']
+            node.classList.add('has-text-weight-semibold')
+            node.href = "#"
+            break
         case 'size':
         case 'downloaded':
         case 'uploaded':
-            val_to_insert = humanFileSize(torrent_dict[key])
+            node.innerText = humanFileSize(torrent_dict[key])
             break
         case 'progress':
-            val_to_insert = "15%"
+            node = document.createElement('progress')
+            node.text = "15%"
+            node.value = 15
+            node.max = 100
+            node.classList.add("progress")
             break
 
         case 'download_speed':
         case 'upload_speed':
-            val_to_insert = humanFileSize(torrent_dict[key]) + "/s"
+            node.innerText = humanFileSize(torrent_dict[key]) + "/s"
             break
 
         case 'leechers':
         case 'seeders':
-            val_to_insert = torrent_dict[key] + ' (' + torrent_dict['connected_' + key] + ')';
+            node.innerText = torrent_dict[key] + ' (' + torrent_dict['connected_' + key] + ')';
             break
 
         default:
-            val_to_insert = torrent_dict[key]
+            node.innerText = torrent_dict[key]
 
     }
 
-    current_cell.appendChild(document.createTextNode(val_to_insert))
+    current_cell.appendChild(node)
 
 }
 
 
 }
 
-function build_table(){
+function rebuild_table(){
     const table = document.getElementById("torrentlist")
+    while(table.rows[0]) table.deleteRow(0);
     fetch_torrents().then(torrent_list =>{
         torrent_list.forEach(torrent_dict => build_row(torrent_dict, table, -1))
     })
     
 }
-
-build_table()
