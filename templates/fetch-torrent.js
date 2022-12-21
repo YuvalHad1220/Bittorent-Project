@@ -101,7 +101,7 @@ for (var i = 0; i<keys.length; i++){
 
 function rebuild_table(){
     const table = document.getElementById("torrentlist")
-    while(table.rows[0]) table.deleteRow(0);
+    
     fetch_torrents().then(torrent_list =>{
         torrent_list.forEach(torrent_dict => build_row(torrent_dict, table, -1))
     })

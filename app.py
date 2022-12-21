@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from torrent import torrent
 import random
 app = Flask(__name__)
@@ -8,7 +8,7 @@ def ret_torrent_list():
     payload = request.json
     
     # first we will return an empty list so we can tell what to display
-    return [torrent().asdict() for _ in range(random.randint(0,240))]
+    return jsonify([torrent().asdict() for _ in range(random.randint(0,240))])
 
 
 @app.route('/', methods = ["GET"])
