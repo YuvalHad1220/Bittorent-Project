@@ -1,20 +1,117 @@
-import string
-def _decode(bencoded_bytes: bytes, decoded_dict: dict, start_search_index: int = 0):
-    # we will find the first d, last e as they are the delimiters
-    
-    # dict start. we will verify dict end with an e
-    if bencoded_bytes[start_search_index] == b'd':
-        pass
+"https://shekhargulati.com/2020/09/19/writing-bencode-parser-in-kotlin/"
+def encode(item):
+    if isinstance(item, str):
+        return f"{len(item)}:{item}"
 
-    # integer start
-    if bencoded_bytes[start_search_index] == b'i':
-        pass
-    
-    if bencoded_bytes[start_search_index] > ord('0') and bencoded_bytes[start_search_index] <= ord('9'):
-        # then we need all bytes from that index until one before :
-        pass
-    #
-def decode(bencoded_bytes):
-    decoded_dict = dict()
+    if isinstance(item, int):
+        return f"i{item}e"
 
-    _decode(bencoded_bytes, decoded_dict)
+    if isinstance(item, list):
+        # for every item in list we need to encode
+        st = "l"
+        st+= ''.join([encode(item_in_list) for item_in_list in item])
+        st+= "e"
+        return st
+    
+    if isinstance(item, dict):
+        st = "d"
+        st+= ''.join([encode(key)+encode(value) for key,value in item.items()])
+        st += "e"
+        return st
+
+
+def decode_str(encoded_str):
+    "4:spam........."
+    str_len = encoded_str.split(':')[0]
+    print(str_len)
+    digits_in_str = len(str_len)
+    str_len = int(str_len)
+    str_itself = encoded_str[digits_in_str + 1: digits_in_str + 1 + str_len]
+    return str_itself, digits_in_str + 1 + str_len
+
+def decode_int(encoded_str):
+    "i8e........"
+    # we will find the first index of e
+    index_of_e = encoded_str.find('e')
+    return int(encoded_str[1:index_of_e]), index_of_e + 1
+
+def decode_list(encoded_str):
+    "li8e4:spame......."
+    lis = []
+    index = 1 # we know that index 0 is l, so starting from nex one
+    while index < len(encoded_str):
+        current_char = encoded_str[index]
+        if current_char == 'e':
+             # we finished iterating over the list, no point iterating over more
+             # we will just update the index before
+            index += 1
+            break
+        decoded_val, index_to_update = decode(encoded_str[index:])
+        lis.append(decoded_val)
+        index += index_to_update
+
+    return lis, index
+
+def decode_dict(encoded_str):
+    "d3:key5value:li8e4:spame......."
+    dic = dict()
+    index = 1 # we know that index 0 is l, so starting from nex one
+    while index < len(encoded_str):
+        current_char = encoded_str[index]
+        if current_char == 'e':
+             # we finished iterating over the dict, no point iterating over more
+             # we will just update the index before
+            index += 1
+            break
+        decoded_val_as_key, index_to_update = decode(encoded_str[index:])
+        index += index_to_update
+        decoded_val_as_value, index_to_update = decode(encoded_str[index:])
+        index += index_to_update
+
+        dic[decoded_val_as_key] = decoded_val_as_value
+    
+    return dic,index
+
+
+def decode(encoded_str):
+    index = 0
+    lis = []
+
+    while index < len(encoded_str):
+        current_char = encoded_str[index]
+        match current_char:
+            case 'i':
+                int_value, scanned_length = decode_int(encoded_str[index:])
+                lis.append(int_value)
+                index += scanned_length
+                break
+
+
+            case 'l':
+                lis_value, scanned_length = decode_list(encoded_str[index:])
+                lis.append(lis_value)
+                index += scanned_length
+
+
+            case 'd':
+                dic_value, scanned_length = decode_dict(encoded_str[index:])
+                lis.append(dic_value)
+                index += scanned_length
+                break
+
+            case _: # default, meaning its string
+                print(encoded_str[index:])
+                str_value, scanned_length = decode_str(encoded_str[index:])
+                lis.append(str_value)
+                index += scanned_length
+    
+    return lis, index
+
+dic = {"yuval":"is the best",
+"test": [1,2,3,4]}
+
+encoded = encode(dic)
+print(encoded)
+
+decoded = decode(encoded)
+print(decoded)
