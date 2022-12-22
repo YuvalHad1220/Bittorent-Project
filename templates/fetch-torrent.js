@@ -1,4 +1,4 @@
-function humanFileSize(bytes, si=true, dp=1) {
+function humanFileSize(bytes, si=false, dp=1) {
     const thresh = si ? 1000 : 1024;
   
     if (Math.abs(bytes) < thresh) {
@@ -101,7 +101,9 @@ for (var i = 0; i<keys.length; i++){
 
 function rebuild_table(){
     const table = document.getElementById("torrentlist")
-    
+    while(table.rows.length > 1) {
+        table.deleteRow(-1);
+      }
     fetch_torrents().then(torrent_list =>{
         torrent_list.forEach(torrent_dict => build_row(torrent_dict, table, -1))
     })

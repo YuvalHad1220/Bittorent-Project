@@ -1,16 +1,16 @@
 <!--https://bulma.io/documentation/components/navbar/-->
 
-<nav class="navbar" role="navigation" aria-label="main navbar">
+<nav class="navbar is-dark" role="navigation" aria-label="main navbar">
     <div id="main-nav-items" class="navbar-menu">
         <div class="navbar-brand">
-            <a class="navbar-item" href="#">
+            <a class="navbar-item" href={{url_for('homepage')}}>
                 <img src="https://img.icons8.com/ios/512/torrential-rain.png"/>
             </a>
         </div>
         <!-- aligned to left-->
         <div class="navbar-start">
             <a class="navbar-item"><strong>Add torrents</strong></a>
-            <a class="navbar-item">Create .torrentx file</a>
+            <a class="navbar-item" href ={{url_for('create_torrentx')}}>Create .torrentx file</a>
         </div>
 
         <!-- aligned to right-->

@@ -1,6 +1,5 @@
 import unittest
 from bencoding import encode, decode
-
 import random, string
 
 

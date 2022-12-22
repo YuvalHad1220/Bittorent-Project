@@ -1,0 +1,96 @@
+<!--https://bulma.io/documentation/form/general/-->
+<!--https://bulma.io/documentation/layout/container/-->
+<!--Form needs: Torrent Name [V], Piece size [auto calculate] [V], Public Key [V], Trackers to Add [V] , Comments [V], Select Files [V], Submit [V], Progress [V]-->
+<div class="container">
+    <form method="post">
+    <div class="field">
+        <label class="label">Torrent Name</label>
+        <div class="control">
+            <input class="input" type="text" placeholder="Example torrent name" required>
+        </div>
+
+    <div class="field">
+        <label class="label">Piece Size</label>
+    </div>
+    <div class="field is-grouped">
+        <div class="control">
+            <div class="select">
+                <select>
+                <option>Auto</option>
+                <option>16 KiB</option>
+                <option>32 KiB</option>
+                <option>64 KiB</option>
+                <option>128 KiB</option>
+                <option>256 KiB</option>
+                <option>512 KiB</option>
+                <option>1 MiB</option>
+                <option>2 MiB</option>
+                <option>4 MiB</option>
+                <option>8 MiB</option>
+                <option>16 MiB</option>
+                <option>32 MiB</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="control">
+            <button class="button is-link is-light">Calculate & Display Piece Size</button>
+        </div>
+    </div>
+    <div class="field">
+    <label class="label">Public Key</label>
+        <div class="control">
+            <input class="input" type="text" placeholder="Enter Public Key string to encrypt torrent files by" required>
+        </div>
+    </div>
+
+    <div class="field">
+        <label class="label">Trackers [Optional]</label>
+        <div class="control">
+        <textarea class="textarea" placeholder="Seperate Trackers by Return"></textarea>
+        </div>
+    </div>
+
+
+    <div class="field">
+        <label class="label">Comments [Optional]</label>
+        <div class="control">
+            <textarea class="textarea" placeholder="Short description of the torrent"></textarea>
+        </div>
+    </div>
+
+    <div class="field">
+        <label class="label">Select File(s) / Folder</label>
+        <div class="control">
+            <div class="file has-name is-boxed is-small">
+                <label class="file-label">
+                <input class="file-input" type="file" multiple required>
+                <span class="file-cta">
+                    <span class="file-icon">
+                    <i class="fas fa-upload"></i>
+                    </span>
+                    <span class="file-label">
+                    Choose a file…
+                    </span>
+                </span>
+                <span class="file-name">
+                    Example chosen folder
+                </span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="field">
+        <progress class="progress is-large is-primary" value="0" max="100">0%</progress>
+    </div>
+    <div class="field">
+        <div class="control">
+            <button class="button is-primary">Submit</button>
+        </div>
+    </div>
+
+    </div>
+
+    </form>
+</div>
