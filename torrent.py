@@ -1,6 +1,5 @@
 from dataclasses import dataclass, asdict
 
-
 @dataclass
 class torrent:
     index: int = 1

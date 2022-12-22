@@ -14,10 +14,13 @@ def ret_torrent_list():
 @app.route('/create_torrentx', methods=["GET", "POST"])
 def create_torrentx():
     if request.method == "POST":
-        
+
         print("got post")
     return render_template('create-torrentx-page.html')
 
+@app.route('/add_torrent', methods = ["GET", "POST"])
+def add_torrent():
+    return render_template('add-torrent-files-page.html')
 
 
 @app.route('/', methods = ["GET"])

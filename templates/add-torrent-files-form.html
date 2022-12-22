@@ -1,0 +1,60 @@
+<!-- same as create-torrentx-form -->
+<!--Select torrent Files [V], Directory [V], auto-decrypt (if torrentx)-->
+
+<script>
+{% include 'add-torrent-form.js' %}
+</script>
+
+<div class="container">
+    <form method="post" enctype="multipart/form-data">
+        <div class="field">
+            <label class="label">Select .torrent / .torrentx Files</label>
+            <div class="control">
+                <div class="file has-name is-boxed is-small">
+                    <label class="file-label">
+                    <input class="file-input" type="file" id="torrent_files" multiple required onchange="change_selected_files_spaen(this)">
+                    <span class="file-cta">
+                        <span class="file-icon">
+                        <i class="fas fa-upload"></i>
+                        </span>
+                        <span class="file-label">
+                        Choose a file…
+                        </span>
+                    </span>
+                    <span class="file-name" id="selected_files">
+                    </span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="field">
+            <label class="label">Enter Directory to download files (Due to API limitation I can't display a dialog)</label>
+            <div class="control">
+                <input class="input" type="text" placeholder="Enter Absolute path" required>
+            </div>
+        </div>
+
+
+        <div class="field">
+            <label class="label">Auto decrypt .torrentx Files?</label>
+        </div>
+        <div class="control">
+            <label class="radio">
+              <input type="radio" name="toDecrypt" value="True">
+              Yes
+            </label>
+            <label class="radio">
+              <input type="radio" name="toDecrypt" value="False" checked>
+              No
+            </label>
+          </div>
+    <div class="field">
+        <div class="control">
+            <button class="button is-primary">Submit</button>
+        </div>
+    </div>
+
+    </form>
+</div>
