@@ -1,3 +1,7 @@
 {
     "size_calc": "si",
+    "default_download_path": "",
+    "port": 25565,
+    "max_torrentx_file_size": 1500000
+    
 }
