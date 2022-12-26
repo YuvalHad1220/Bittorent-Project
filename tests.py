@@ -1,97 +1,80 @@
 import unittest
 from bencoding import *
-import random, string
+import string
 from utils import sizes, return_piece_size
 
 
 class TestBencode(unittest.TestCase):
-    def gen_random_list():
-        # in list we want to be dicts, ints, strs randomly.
-        dicts_amount = random.randint(0, 64) + 1
-        int_amount = random.randint(0, 64) + 1
-        str_amount = random.randint(0, 64) + 1
-
-        to_ret = (
-            [TestBencode.gen_random_dict() for _ in range(dicts_amount)]
-            + [TestBencode.gen_random_int() for _ in range(int_amount)]
-            + [TestBencode.gen_random_str() for _ in range(str_amount)]
-        )
-        random.shuffle(to_ret)
-        return to_ret
-
-    def gen_random_int():
-        return random.randint(-64, 64)
-
-    def gen_random_str():
-        letters = (
-            string.printable
-        )  # characters that are considered printable. This is a combination of constants digits, letters, punctuation, and whitespace.
-        return "".join(random.choice(letters) for _ in range(random.randint(0, 64)))
-
-    def gen_random_dict():
-        # we want random int or str as keys. we want random int, str, lists as values
-
-        dic = dict()
-        int_keys = [
-            TestBencode.gen_random_int() for _ in range(random.randint(0, 64) + 1)
-        ]
-        str_keys = [
-            TestBencode.gen_random_str() for _ in range(random.randint(0, 64) + 1)
-        ]
-
-        for key in int_keys + str_keys:
-            chosen = random.randint(1, 2)
-            val = None
-            match chosen:
-                case 1:
-                    val = TestBencode.gen_random_str()
-                    break
-                case 2:
-                    val = TestBencode.gen_random_int()
-
-            dic[key] = val
-
-        return dic
 
     def test_str(self):
-        _str = "yuvali"
+        _str = string.printable
+        res = decode(encode(_str))[0]
+        expected = _str.encode()
+        self.assertEqual(expected, res)
 
-        encoded = encode(_str)
-        res = decode(encoded)[0].decode()
-        self.assertEqual(_str, res)
 
     def test_int(self):
-        _int = 5
-        encoded = encode(_int)
-        self.assertEqual(_int, decode(encoded)[0])
+        _int = 87259802375690842576903487
+        expected = _int
+        res = decode(encode(_int))[0]
+        self.assertEqual(expected, res)
 
-    # def test_list(self):
-    #     _list = [1,2,4,"yuv",[1,2,3,4]]
-    #     encoded = encode(_list)
-    #     self.assertEqual(_list, decode(encoded)[0])
+    def test_dict(self):
+        _dict = {
+            "yuval": 4,
+            "4": 4,
+            "239048": "234234",
+            "8v hjbngyum, bnw34er eeeeeddddiiiiiillllll": 234234,
+            234: 234234,
+            2365: "324234"
+        }
 
-    # def test_dict(self):
-    #     _dict = {
-    #         "yuvali": 4,
-    #         "test": [1,2,3,4],
-    #         "lol": "lol",
-    #         3: 23423
-    #     }
+        res = decode(encode(_dict))[0]
 
-    # encoded = encode(_dict)
-    # self.assertEqual(_dict, decode(encoded)[0])
+        excepted = {
+            b"yuval": 4,
+            b"4": 4,
+            b"239048": b"234234",
+            b"8v hjbngyum, bnw34er eeeeeddddiiiiiillllll": 234234,
+            234: 234234,
+            2365: b"324234"
+        }
 
-    def test_encoding_decoding(self):
-        # we need to test a dictionary that contain dictonaries, a list that contains lists and so on
+        self.assertEqual(excepted, res)
 
-        test_list = TestBencode.gen_random_list()
+    def test_list(self):
+        _list = [
+            {
+            "yuval": 4,
+            "4": 4,
+            "239048": "234234",
+            "8v hjbngyum, bnw34er eeeeeddddiiiiiillllll": 234234,
+            234: 234234,
+            2365: "324234"
+        },
+        123213, string.printable, [1,4,2, "34234", b'234234'],
+        b'234234234', "yuvalon", "lolo.lolsdf0298490289080908990{dict:testesdf}ff",
+        [[[[[[[[['3'],'b']]],3],3,4,5],{"f":"t"}]]]
+        ]
 
-        encoded = encode(test_list)
+        res = decode(encode(_list))[0]
 
-        decoded = decode(encoded)[0]
+        excepted = [
+            {
+            b"yuval": 4,
+            b"4": 4,
+            b"239048": b"234234",
+            b"8v hjbngyum, bnw34er eeeeeddddiiiiiillllll": 234234,
+            234: 234234,
+            2365: b"324234"
+        },
+        123213, string.printable.encode(), [1,4,2, b"34234", b'234234'],
+        b'234234234', b"yuvalon", b"lolo.lolsdf0298490289080908990{dict:testesdf}ff",
+        [[[[[[[[[b'3'],b'b']]],3],3,4,5],{b"f":b"t"}]]]
+        ]
 
-        self.assertEqual(str(test_list), str(decoded))
-
+        self.assertEqual(excepted, res)
+        
 
 class testUtils(unittest.TestCase):
     def test_piece_size(self):
