@@ -1,13 +1,13 @@
 import sqlite3
 from dataclasses import fields, is_dataclass, dataclass
 import builtins
-from typing import Type, Any, Dict, List, Union
+from typing import Type, Any, Dict, Tuple, Union, List
 import datetime
 
-def _create_connection(db_filename):
+def _create_connection(db_filename) -> sqlite3.Connection:
     return sqlite3.connect(db_filename)
 
-def _split_fields(dc):
+def _split_fields(dc) -> Tuple[List[Any]]:
     basic_fields = []
     either_dc_or_list_fields = []
     for field in fields(dc):
@@ -21,7 +21,7 @@ def _split_fields(dc):
         basic_fields.append(field)
     return basic_fields, either_dc_or_list_fields
 
-def _sql_represent(name, type):
+def _sql_represent(name, type) -> str:
     match type:
         case builtins.int:
             return f"{name} integer"
@@ -46,15 +46,15 @@ def _sql_represent(name, type):
 
 class dctodb:
     @property
-    def table_name(self):
+    def table_name(self) -> str:
         return self.dc.__name__
     
     # a way for our childs to recognize us
     @property
-    def identifier(self):
+    def identifier(self) -> str:
         return self.dc.__name__ + "index"
 
-    def _execute(self, command, args = None):
+    def _execute(self, command, args = None) -> Tuple():
         conn = _create_connection(self.db_filename)
         cur = conn.cursor()
         if args:
@@ -65,11 +65,11 @@ class dctodb:
         return res, conn
 
 
-    def __init__(self, dc: Type[Any], db_filename: str, extra_columns: Dict[str, Any] = None):
+    def __init__(self, dc: Type[Any], db_filename: str, extra_columns: Dict[str, Any] = dict()):
         self.dc: Type[Any] = dc
         self.db_filename: str = db_filename
         self.extra_columns = extra_columns  # won't be returned inside an object but in a dict next to the object
-        self.basic_dc_fields, self.possible_dcs_or_lists = _split_fields(self.dc) # only fields that are not dcs or lists
+        self.basic_fields, self.possible_dcs_or_lists = _split_fields(self.dc) # only fields that are not dcs or lists
         self.dc_in_class_mappings = dict()
         if self.possible_dcs_or_lists:
             self._create_sub_conn(self.possible_dcs_or_lists)
@@ -78,25 +78,12 @@ class dctodb:
 
     def create_table(self):
         command = "CREATE TABLE IF NOT EXISTS {} (id integer PRIMARY KEY AUTOINCREMENT, {});"
-        extra_args = []
-
-        for field in fields(self.dc):
-            if field.name == "index":
-                continue
-            if field.type in self.dc_in_class_mappings:
-                continue
-
-            extra_args.append(_sql_represent(field.name, field.type))
-
-        if self.extra_columns:
-            for col_name, col_type in self.extra_columns.items():
-                extra_args.append(_sql_represent(col_name, col_type))
-        
-        command = command.format(self.table_name, ', '.join(extra_args))
+        # might remove index from basic_fields but unsure
+        args = [_sql_represent(field.name, field.value) for field in self.basic_fields if field.name != 'index'] + [_sql_represent(col_name, col_type) for col_name, col_type in self.extra_columns.keys()]
         _, conn = self._execute(command)
         conn.close()
 
-    def _get_count(self):
+    def _get_count(self) -> int:
         res, conn = self._execute(f"SELECT COUNT(*) FROM {self.dc.__name__}")
         res = res.fetchone()[0]
         conn.close()
@@ -114,26 +101,11 @@ class dctodb:
             self.dc_in_class_mappings[dc_in_class.type] = dctodb(dc_in_class.type, self.db_filename, {self.identifier: int})
 
 
-    def _fetch_from_sub_table(self, self_index, item_to_fetch):
-        """
-        1. Fetch all sub-items from a specific table. We remember that because we know these items have extra columns (AS they are dependent on their parent to be identified)
-        2. if their "parent_index" equals self.index, than it's a child of us that needs to be fetched and returned.
-
-        NEED TO ADD SUPPORT FOR: LIST
-
-        """
-        child_items = self.dc_in_class_mappings[item_to_fetch].fetch_all()
-
-        # currently supporting only one item and not lists
-        for item, extra_columns in child_items:
-            if extra_columns[self.identifier] == self_index:
-                return item
-
     def _insert_list(self):
         pass
 
     def _insert_dcs(self, instance):
-        sub_dcs = filter(lambda x:is_dataclass(x.type), self.possible_dcs_or_lists)
+        sub_dcs = filter(lambda x: is_dataclass(x.type), self.possible_dcs_or_lists)
         for field in sub_dcs:
             instance_dc_value = getattr(instance, field.name)
             self.dc_in_class_mappings[field.type].insert_one(instance_dc_value,{self.identifier:instance.index})
@@ -149,7 +121,7 @@ class dctodb:
 
 
 
-    def insert_one(self, instance, extra_columns: dict[str, Any] = {}):
+    def insert_one(self, instance, extra_columns: Dict[str, Any] = dict()):
         """
         A potentially mega function, we want that function to insert one item (and update its value). if it has extra columns, obviously we need to insert them as well.
         Extra columns is a dict: {col_name: col_value}
@@ -158,7 +130,7 @@ class dctodb:
 
         command = "INSERT INTO {} ({}) VALUES ({});"
         # Remember, we will need to handle dataclasses and lists seperatley so we exclude them from now
-        variable_names = [field.name for field in self.basic_dc_fields if field.name != "index"]
+        variable_names = [field.name for field in self.basic_fields if field.name != "index"]
         variable_values = [getattr(instance, field_name) for field_name in variable_names]
         for col_name, col_value in extra_columns.items():
             variable_names.append(col_name)
@@ -174,7 +146,36 @@ class dctodb:
         if self.dc_in_class_mappings:
             self._insert_dcs(instance)
         
+    def fetch_where(condition) -> List[Tuple[Any, Union[Dict, None]]]:
+        """
+        A cute function that returns a list where condition is met.
+        condition looks like that:
+        FIELD_NAME OPERATOR VALUE
 
+        We will have to make sure that we also fetch sub-classes \ lists if there are any
+        
+        Each row will be dismantled into columns and we will put the columns as needed in args and then return
+        If there are extra_columns, than we return it in a seperate dict
+        """
+        fetched = []
+
+        command = "SELECT * FROM {} WHERE {};"
+
+        
+    def _fetch_from_sub_table(self, self_index, item_to_fetch):
+            """
+            1. Fetch all sub-items from a specific table. We remember that because we know these items have extra columns (AS they are dependent on their parent to be identified)
+            2. if their "parent_index" equals self.index, than it's a child of us that needs to be fetched and returned.
+
+            NEED TO ADD SUPPORT FOR: LIST
+
+            """
+            child_items = self.dc_in_class_mappings[item_to_fetch].fetch_all()
+
+            # currently supporting only one item and not lists
+            for item, extra_columns in child_items:
+                if extra_columns[self.identifier] == self_index:
+                    return item
 
     def fetch_all(self):
         conn = _create_connection(self.db_filename)
