@@ -5,7 +5,6 @@ import string, random
 from utils import sizes, return_piece_size
 from dctodb import dctodb
 import datetime
-global_db_filename = "tests.db"
 
 class TestBencode(unittest.TestCase):
 
@@ -149,88 +148,5 @@ class TestUtils(unittest.TestCase):
             places=4,
         )
 
-
-class TestDcToDbBasic(unittest.TestCase):
-    @dataclass
-    class Test:
-        name: str
-        some_bytes: bytes
-        index: int = 0
-
-    @classmethod
-    def setUpClass(cls):
-        cls.test_db: dctodb = dctodb(TestDcToDbBasic.Test, global_db_filename)
-
-
-    def test_basic_insert(self):
-        """
-        Asserting that after insertion we get our rows (indexes) correctly. This ensures that the insertion was working.
-
-        """
-        row_count_in_table = self.test_db._get_count() # we want row amount before insertion
-
-        test_obj_lis = [self.Test("yuval", b'yuvalhahaha') for _ in range(random.randint(1, 10))]
-        TestDcToDbBasic.test_db.insert(*test_obj_lis)
-        for i, test_obj in enumerate(test_obj_lis, 1 + row_count_in_table):
-            self.assertEqual(i, test_obj.index)
-
-    def test_basic_fetching_all(self):
-        res = TestDcToDbBasic.test_db.fetch_all()
-        self.assertEqual(len(res), self.test_db._get_count())
-
-    # def test_basic_update(self):
-    #     pass
-
-    # def test_basic_delete(self):
-    #     pass
-
-    # def test_basic_fetch_where(self):
-    #     pass
-
-class TestDcToDbWithSubclass(unittest.TestCase):
-    @dataclass
-    class SubDc:
-        is_sub_cls: bool
-        datetime_works: datetime.datetime
-
-    @classmethod
-    def setUpClass(cls):
-        cls.test_db: dctodb = dctodb(TestDcToDbBasic.Test, global_db_filename)
-
-    def test_with_sub_dc_insert(self):
-        pass
-
-    def test_with_sub_dc_fetching_all(self):
-        pass
-
-    def test_with_sub_dc_update(self):
-        pass
-
-    def test_with_sub_dc_delete(self):
-        pass
-
-    def test_with_list_insert(self):
-        pass
-
-    def test_with_list_fetching_all(self):
-        pass
-
-    def test_with_list_update(self):
-        pass
-
-    def test_with_list_delete(self):
-        pass
-
-    def test_with_list_of_dcs_insert(self):
-        pass
-
-    def test_with_list_of_dcs_fetching_all(self):
-        pass
-
-    def test_with_list_of_dcs_update(self):
-        pass
-
-    def test_with_list_of_dcs_delete(self):
-        pass
 if __name__ == "__main__":
     unittest.main()

@@ -1,190 +1,180 @@
 import sqlite3
-from dataclasses import fields, is_dataclass
+from dataclasses import fields, is_dataclass, dataclass
 import builtins
-from typing import Type, Any, Dict
+from typing import Type, Any, Dict, List, Union
 import datetime
-
 
 def _create_connection(db_filename):
     return sqlite3.connect(db_filename)
 
+def _split_fields(dc):
+    basic_fields = []
+    either_dc_or_list_fields = []
+    for field in fields(dc):
+        if is_dataclass(field.type):
+            either_dc_or_list_fields.append(field)
+            continue
+        if isinstance(field.type, list):
+            either_dc_or_list_fields.append(field)
+            continue
+
+        basic_fields.append(field)
+    return basic_fields, either_dc_or_list_fields
+
+def _sql_represent(name, type):
+    match type:
+        case builtins.int:
+            return f"{name} integer"
+
+        case builtins.str:
+            return f"{name} text"
+
+        case builtins.bool:
+            return f"{name} boolean"
+
+        case builtins.bytes:
+            return f"{name} binary"
+
+        case datetime.datetime:
+            return f"{name} smalldatetime"
+
+        case builtins.float:
+            return f"{name} float"
+
+        case _:
+            raise Exception(f"Unrecognized type: {type}")
 
 class dctodb:
-    def _get_dc_fields(self):
-        return [field.type for field in fields(self.dc) if is_dataclass(field.type)]
+    @property
+    def table_name(self):
+        return self.dc.__name__
+    
+    # a way for our childs to recognize us
+    @property
+    def identifier(self):
+        return self.dc.__name__ + "index"
 
-    def _get_count(self):
+    def _execute(self, command, args = None):
         conn = _create_connection(self.db_filename)
         cur = conn.cursor()
-        res = cur.execute(f"SELECT COUNT(*) FROM {self.dc.__name__}").fetchone()[0]
-        return res
+        if args:
+            res = cur.execute(command, args)
+        else:
+            res = cur.execute(command)
 
-    def _create_sub_table(self, dcs_in_class):
-        # we will iterate over each item in dcs we have and create a table accordingly, attaching our id
-        for dc_in_class in dcs_in_class:
-            # we will need to create a table to each, with extra column that is the id of self.
-            self.dc_in_class_mappings[dc_in_class] = dctodb(
-                dc_in_class, self.db_filename, {self.dc.__name__ + "index": int}
-            )
+        return res, conn
 
-    def _fetch_from_sub_table(self, self_index, item_to_fetch):
-        # will return all the items with matching self_index.
-        # obviously that means that we will have to fetch self first
-        possible_items = self.dc_in_class_mappings[
-            item_to_fetch
-        ].fetch_all()  # returns a tuple with extra columns: (item, extracolumn:Value)
 
-        # currently supporting only one item and not lists
-        for item, extra_columns in possible_items:
-            if extra_columns[self.dc.__name__ + "index"] == self_index:
-                return item
-
-    def __init__(
-        self, dc: Type[Any], db_filename: str, extra_columns: Dict[str, Any] = None
-    ):
+    def __init__(self, dc: Type[Any], db_filename: str, extra_columns: Dict[str, Any] = None):
         self.dc: Type[Any] = dc
         self.db_filename: str = db_filename
-        self.dc_in_class_mappings = dict()
         self.extra_columns = extra_columns  # won't be returned inside an object but in a dict next to the object
-        possible_dcs = self._get_dc_fields()
-        if possible_dcs:
-            self._create_sub_table(possible_dcs)
-
+        self.basic_dc_fields, self.possible_dcs_or_lists = _split_fields(self.dc) # only fields that are not dcs or lists
+        self.dc_in_class_mappings = dict()
+        if self.possible_dcs_or_lists:
+            self._create_sub_conn(self.possible_dcs_or_lists)
+        
         self.create_table()
 
     def create_table(self):
-        command = f"CREATE TABLE IF NOT EXISTS {self.dc.__name__} (id integer PRIMARY KEY AUTOINCREMENT, "
+        command = "CREATE TABLE IF NOT EXISTS {} (id integer PRIMARY KEY AUTOINCREMENT, {});"
+        extra_args = []
 
         for field in fields(self.dc):
             if field.name == "index":
                 continue
+            if field.type in self.dc_in_class_mappings:
+                continue
 
-            match field.type:
-                case builtins.int:
-                    command += f"{field.name} integer, "
-
-                case builtins.str:
-                    command += f"{field.name} text, "
-
-                case builtins.bool:
-                    command += f"{field.name} boolean, "
-
-                case builtins.bytes:
-                    command += f"{field.name} binary, "
-
-                case datetime.datetime:
-                    command += f"{field.name} smalldatetime, "
-
-                case builtins.float:
-                    command += f"{field.name} float, "
-
-                case _:
-                    if field.type in self.dc_in_class_mappings:
-                        continue
-                    raise Exception(f"unsupported data type: {field.type}")
+            extra_args.append(_sql_represent(field.name, field.type))
 
         if self.extra_columns:
             for col_name, col_type in self.extra_columns.items():
-                match col_type:
-                    case builtins.int:
-                        command += f"{col_name} integer, "
-
-                    case builtins.str:
-                        command += f"{col_name} text, "
-
-                    case builtins.bool:
-                        command += f"{col_name} boolean, "
-
-                    case builtins.bytes:
-                        command += f"{col_name} binary, "
-
-                    case datetime.datetime:
-                        command += f"{col_name} smalldatetime, "
-
-                    case builtins.float:
-                        command += f"{col_name} float, "
-
-                    case _:
-                        raise Exception(f"unsupported data type: {field.type}")
-
-        command = command[:-2]  # removing ', ' from command
-        command += ");"  # closing the command
-        conn = _create_connection(self.db_filename)
-        cur = conn.cursor()
-        cur.execute(command)
+                extra_args.append(_sql_represent(col_name, col_type))
+        
+        command = command.format(self.table_name, ', '.join(extra_args))
+        _, conn = self._execute(command)
         conn.close()
 
-    def insert(self, *instances_of_dc):
-        # before any inserting, we need to verify the indexes of our current.
-        curr_items = (
-            self._get_count()
-        )  # because the counting starts from 1, 4 items means than the next item we need to insert is five.
+    def _get_count(self):
+        res, conn = self._execute(f"SELECT COUNT(*) FROM {self.dc.__name__}")
+        res = res.fetchone()[0]
+        conn.close()
+        return res
 
-        if self.extra_columns:
-            for instance, dic in instances_of_dc:
-                instance.index = curr_items + 1
-                curr_items += 1
-        else:
-            for instance in instances_of_dc:
-                instance.index = curr_items + 1
-                curr_items += 1
-        # before inserting self, we will call the insert the method of our subclasses
+    def _create_sub_conn(self, dcs_or_classes_in_class):
+        """
+        Essentially, Before we insert self, we need to create sub-connections to every complicated object we need to store, like sub-dataclasses and lists.
+        That connection is creating connection to our sub-dataclasses, however we create extra columns that are not part of the object but rather an identifier to their parent class
+
+        NEED TO ADD SUPPORT FOR: LIST
+
+        """
+        for dc_in_class in dcs_or_classes_in_class:
+            self.dc_in_class_mappings[dc_in_class.type] = dctodb(dc_in_class.type, self.db_filename, {self.identifier: int})
+
+
+    def _fetch_from_sub_table(self, self_index, item_to_fetch):
+        """
+        1. Fetch all sub-items from a specific table. We remember that because we know these items have extra columns (AS they are dependent on their parent to be identified)
+        2. if their "parent_index" equals self.index, than it's a child of us that needs to be fetched and returned.
+
+        NEED TO ADD SUPPORT FOR: LIST
+
+        """
+        child_items = self.dc_in_class_mappings[item_to_fetch].fetch_all()
+
+        # currently supporting only one item and not lists
+        for item, extra_columns in child_items:
+            if extra_columns[self.identifier] == self_index:
+                return item
+
+    def _insert_list(self):
+        pass
+
+    def _insert_dcs(self, instance):
+        sub_dcs = filter(lambda x:is_dataclass(x.type), self.possible_dcs_or_lists)
+        for field in sub_dcs:
+            instance_dc_value = getattr(instance, field.name)
+            self.dc_in_class_mappings[field.type].insert_one(instance_dc_value,{self.identifier:instance.index})
+
+    
+    def insert_many(self, *instances):
+        """
+        Mega function that consists of multiple child functions.
+        1. We will insert our dataclasses and lists
+        2. We will insert ourselves, MEANWHILE updating our indexes as fitted in the db itself.
+        
+        """
+
+
+
+    def insert_one(self, instance, extra_columns: dict[str, Any] = {}):
+        """
+        A potentially mega function, we want that function to insert one item (and update its value). if it has extra columns, obviously we need to insert them as well.
+        Extra columns is a dict: {col_name: col_value}
+        After we updated our own index, we can proceed to enter fields like dcs and lists
+        """
+
+        command = "INSERT INTO {} ({}) VALUES ({});"
+        # Remember, we will need to handle dataclasses and lists seperatley so we exclude them from now
+        variable_names = [field.name for field in self.basic_dc_fields if field.name != "index"]
+        variable_values = [getattr(instance, field_name) for field_name in variable_names]
+        for col_name, col_value in extra_columns.items():
+            variable_names.append(col_name)
+            variable_values.append(col_value)
+
+        command = command.format(self.table_name, ', '.join(variable_names), ','.join(['?'] * len(variable_names)))
+        _, conn = self._execute(command, variable_values)
+        res = conn.commit()
+        instance.index = self._get_count()
+
+        conn.close()
+
         if self.dc_in_class_mappings:
-            for instance in instances_of_dc:
-                for field in fields(instance):
-                    if field.type in self.dc_in_class_mappings:
-                        self.dc_in_class_mappings[field.type].insert(
-                            (
-                                getattr(instance, field.name),
-                                {self.dc.__name__ + "index": instance.index},
-                            )
-                        )
-                        break
+            self._insert_dcs(instance)
+        
 
-        if not self.extra_columns:
-            var_names = []
-            for field in fields(self.dc):
-                if field.name == "index":
-                    continue
-                if field.type in self.dc_in_class_mappings:
-                    continue
-                var_names.append(field.name)
-
-
-            command = f"INSERT INTO {self.dc.__name__} ({','.join(var_names)}) VALUES ({'?,' * len(var_names)}"
-            command = command[:-1]  # strip ','
-            command += ")"
-
-            val_list = [
-                tuple(getattr(instance, var_name) for var_name in var_names)
-                for instance in instances_of_dc
-            ]
-
-            val_instance_list = []
-            
-        if self.extra_columns:
-            var_names = [field.name for field in fields(self.dc)] + list(
-                self.extra_columns.keys()
-            )
-            var_names.remove("index")
-            command = f"INSERT INTO {self.dc.__name__} ({','.join(var_names)}) VALUES ({'?,' * len(var_names)}"
-            command = command[:-1]  # strip ','
-            command += ")"
-            val_list = [
-                tuple(
-                    getattr(instance, var_name)
-                    for var_name in var_names
-                    if var_name not in self.extra_columns.keys()
-                )
-                + tuple(extra_columns.values())
-                for instance, extra_columns in instances_of_dc
-            ]
-
-        conn = _create_connection(self.db_filename)
-        cur = conn.cursor()
-        cur.executemany(command, val_list)
-        conn.commit()
-        conn.close()
 
     def fetch_all(self):
         conn = _create_connection(self.db_filename)
