@@ -1,5 +1,5 @@
 import unittest
-from bencoding import encode, decode
+from bencoding import *
 import random, string
 from utils import sizes, return_piece_size
 
@@ -44,6 +44,36 @@ class TestBencode(unittest.TestCase):
 
         return dic
 
+    def test_str(self):
+        _str = "yuvali"
+
+        encoded = encode(_str)
+        res = decode(encoded)[0].decode()
+        self.assertEqual(_str, res)
+
+    def test_int(self):
+        _int = 5
+        encoded = encode(_int)
+        self.assertEqual(_int, decode(encoded)[0])
+        
+    # def test_list(self):
+    #     _list = [1,2,4,"yuv",[1,2,3,4]]
+    #     encoded = encode(_list)
+    #     self.assertEqual(_list, decode(encoded)[0])
+
+    # def test_dict(self):
+    #     _dict = {
+    #         "yuvali": 4,
+    #         "test": [1,2,3,4],
+    #         "lol": "lol",
+    #         3: 23423
+    #     }
+
+        # encoded = encode(_dict)
+        # self.assertEqual(_dict, decode(encoded)[0])
+
+
+
     def test_encoding_decoding(self):
         # we need to test a dictionary that contain dictonaries, a list that contains lists and so on
         
@@ -52,13 +82,9 @@ class TestBencode(unittest.TestCase):
         encoded = encode(test_list)
 
         decoded = decode(encoded)[0]
-        print(encoded)
-        print('------------------------')
-        print(decoded)
-        print('------------------------')
-        print(test_list)
-        
+
         self.assertEqual(str(test_list), str(decoded))
+
 
 class testUtils(unittest.TestCase):
     def test_piece_size(self):
