@@ -75,8 +75,7 @@ class TestBencode(unittest.TestCase):
 
         self.assertEqual(excepted, res)
         
-
-class testUtils(unittest.TestCase):
+class TestUtils(unittest.TestCase):
     def test_piece_size(self):
         # we want to make sure we get smallest pieces size available
         file_size_to_256kib = (
@@ -148,5 +147,58 @@ class testUtils(unittest.TestCase):
         )
 
 
+# so help me god...
+class TestDcToDb(unittest.TestCase):
+
+    def test_basic_insert(self):
+        pass
+
+    def test_basic_fetching_all(self):
+        pass
+
+    def test_basic_update(self):
+        pass
+
+    def test_basic_delete(self):
+        pass
+
+    # def test_basic_fetch_where(self):
+    #     pass
+
+    def test_with_sub_dc_insert(self):
+        pass
+
+    def test_with_sub_dc_fetching_all(self):
+        pass
+
+    def test_with_sub_dc_update(self):
+        pass
+
+    def test_with_sub_dc_delete(self):
+        pass
+
+    def test_with_list_insert(self):
+        pass
+
+    def test_with_list_fetching_all(self):
+        pass
+
+    def test_with_list_update(self):
+        pass
+
+    def test_with_list_delete(self):
+        pass
+
+    def test_with_list_of_dcs_insert(self):
+        pass
+
+    def test_with_list_of_dcs_fetching_all(self):
+        pass
+
+    def test_with_list_of_dcs_update(self):
+        pass
+
+    def test_with_list_of_dcs_delete(self):
+        pass
 if __name__ == "__main__":
     unittest.main()

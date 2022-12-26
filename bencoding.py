@@ -82,7 +82,7 @@ def decode_dict(encoded_bytes) -> Tuple[Dict[Any,Any]]:
     return dic, index
 
 
-def decode(encoded_bytes) -> Any:
+def decode(encoded_bytes) -> Tuple[Any, int]:
     index = 0
     while index < len(encoded_bytes) and encoded_bytes[index] != ord(b"e"):
         current_char = encoded_bytes[index]
