@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from torrent import torrent
+from app_operations import handle_torrent
 import random
 
 app = Flask(__name__)
@@ -24,6 +25,11 @@ def create_torrentx():
 
 @app.route("/add_torrent", methods=["GET", "POST"])
 def add_torrent():
+    if request.method == "POST":
+        print("got post")
+        handle_torrent(request)
+
+
     return render_template("add-torrent-files-page.html")
 
 
@@ -35,4 +41,4 @@ def homepage():
 
 
 if __name__ == "__main__":
-    app.run(port=12345, debug=True)
+    app.run(port=12345, debug=False)

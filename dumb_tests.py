@@ -1,31 +1,16 @@
-# from bencoding import *
-# from torrent import torrent_pieces
+from torrent import create_torrent, Torrent
+import dctodb
 
 
-# with open('manjaro-kde-21.3.7-220816-linux515.iso.torrent', 'rb') as f:
-#     content = f.read()
+download_path = "download_folder"
+torrent_file_path = "manjaro-kde-21.3.7-220816-linux515.iso.torrent"
+stored_file_path = "added_torrents"
+to_decrypt = False
+with open(torrent_file_path, 'rb') as f:
+    content = f.read()
 
 
-from dataclasses import dataclass
-import datetime
-from dctodb import dctodb
+torrent_obj = create_torrent(stored_file_path, content, download_path, to_decrypt)
 
-@dataclass 
-class sub_class:
-    date: datetime.datetime
-    index: int = 0
-
-    
-@dataclass
-class mainClass:
-    name: str
-    age: int
-    sub: sub_class
-
-    index: int = 0
-
-mainclass_db = dctodb(mainClass, "Test.db")
-
-mainobj = mainClass("yuvi", 23, sub_class(datetime.datetime.now()))
-mainclass_db.insert_one(mainobj)
-# print(mainobj.index)
+torrent_db = dctodb.dctodb(Torrent, "test.db")
+torrent_db.insert_one(torrent_obj)

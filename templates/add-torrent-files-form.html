@@ -12,7 +12,7 @@
             <div class="control">
                 <div class="file has-name is-boxed is-small">
                     <label class="file-label">
-                    <input class="file-input" type="file" id="torrent_files" multiple required onchange="change_selected_files_spaen(this)">
+                    <input class="file-input" type="file" name="torrent_files" id="torrent_files" multiple required onchange="change_selected_files_spaen(this)">
                     <span class="file-cta">
                         <span class="file-icon">
                         <i class="fas fa-upload"></i>
@@ -32,7 +32,7 @@
         <div class="field">
             <label class="label">Enter Directory to download files (Due to API limitation I can't display a dialog)</label>
             <div class="control">
-                <input class="input" type="text" placeholder="Enter Absolute path" required>
+                <input class="input" id = "downloadPath" name="downloadPath" "type="text" placeholder="Enter Absolute path" required>
             </div>
         </div>
 

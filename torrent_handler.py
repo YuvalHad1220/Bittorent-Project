@@ -1,3 +1,6 @@
+from dctodb import dctodb
+from torrent import Torrent
+
 """
 Instead of taking care of torrent handling (getting sorted list, adding torrent to list and database, remove from list and database etc)
 we will create a torrent handler that will take care of that in every operation
@@ -5,9 +8,9 @@ we will create a torrent handler that will take care of that in every operation
 
 
 class torrentHandler:
-    def __init__(self) -> None:
-        self.torrent_db = None
-        self.torrent_list = None
+    def __init__(self, db_filename) -> None:
+        self.torrent_db = dctodb(Torrent, db_filename)
+        self.torrent_list = self.torrent_db.fetch_all()
 
     def add_torrent(self):
         pass

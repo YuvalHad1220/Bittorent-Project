@@ -4,6 +4,7 @@ https://www.reddit.com/r/torrents/comments/dzxfz1/2019_whats_ideal_piece_size/
 
 NOTE: need to configure to use si\decimal method
 """
+import pathlib
 
 sizes = {
     "b": 1,
@@ -16,6 +17,16 @@ sizes = {
     "GiB": 1024**3 * 8,
     "TiB": 1024**4 * 8,
 }
+
+def pieces_list_from_bytes(pieces_bytes: bytes):
+    piece_size = 20 # each SHA-1 hash is 20 bytes
+    pieces = [pieces_bytes[i:i+piece_size] for i in range(0, len(pieces_bytes), piece_size)]
+    return pieces
+
+def create_if_path_not_exists(filename):
+    path = pathlib.Path(filename)
+    if not path.exists():
+        path.mkdir()
 
 
 def return_piece_size(file_size):
