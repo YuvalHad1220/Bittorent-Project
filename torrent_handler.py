@@ -7,7 +7,7 @@ we will create a torrent handler that will take care of that in every operation
 """
 
 
-class torrentHandler:
+class TorrentHandler:
     def __init__(self, db_filename) -> None:
         self.torrent_db = dctodb(Torrent, db_filename)
         self.torrent_list = self.torrent_db.fetch_all()
@@ -18,13 +18,14 @@ class torrentHandler:
         self.torrent_db.insert_one(torrent_obj)
 
         if old_index != torrent_obj.index:
+            self.torrent_list.append(torrent_obj)
             return True
         return False
 
     def delete_torrent(self):
         pass
 
-    def get_torrent_list(self):
+    def get_torrents(self):
         return self.torrent_list[:]
 
     def get_torrents_by_index(self, *indexes):
@@ -35,3 +36,5 @@ class torrentHandler:
 
     def save_torrents_to_db(self):
         pass
+
+

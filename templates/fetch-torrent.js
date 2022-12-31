@@ -51,7 +51,7 @@ checkbox_input.type = 'checkbox'
 row.insertCell(0).appendChild(checkbox_input)
 
 // not keys of the dict, but kys that we need to add to row
-var keys = ['index', 'name', 'state', '_type', 'protocol', 'size', 'progress', 'download_speed', 'downloaded', 'upload_speed', 'uploaded', 'seeders', 'leechers']
+var keys = ['index', 'name', 'state', 'type', 'tracker protocol', 'size', 'progress', 'download_speed', 'downloaded', 'upload_speed', 'uploaded', 'seeders', 'leechers']
 for (var i = 0; i<keys.length; i++){
     var current_cell = row.insertCell(i + 1);
     var node = document.createElement('p')
@@ -71,8 +71,9 @@ for (var i = 0; i<keys.length; i++){
             break
         case 'progress':
             node = document.createElement('progress')
-            node.text = "15%"
-            node.value = 15
+            progress = (torrent_dict['downloaded'] / torrent_dict['size'] * 100).toFixed(2)
+            node.text = progress + "%"
+            node.value = progress
             node.max = 100
             node.classList.add("progress")
             break
