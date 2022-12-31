@@ -12,14 +12,20 @@ class torrentHandler:
         self.torrent_db = dctodb(Torrent, db_filename)
         self.torrent_list = self.torrent_db.fetch_all()
 
-    def add_torrent(self):
-        pass
+    def add_torrent(self, torrent_obj: Torrent):
+        old_index = torrent_obj.index
+
+        self.torrent_db.insert_one(torrent_obj)
+
+        if old_index != torrent_obj.index:
+            return True
+        return False
 
     def delete_torrent(self):
         pass
 
     def get_torrent_list(self):
-        pass
+        return self.torrent_list[:]
 
     def get_torrents_by_index(self, *indexes):
         pass

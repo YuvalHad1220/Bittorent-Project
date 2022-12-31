@@ -176,6 +176,36 @@ class dctodb:
             list_fields_values_mappings[list_field] = list_items_as_original_type
         return list_fields_values_mappings
 
+    def fetch_all(self) -> List[Tuple[Any, Union[Dict, None]]]:
+        """
+        A cute function that returns a list where condition is met.
+        condition looks like that:
+        FIELD_NAME OPERATOR VALUE
+
+        We will have to make sure that we also fetch sub-classes \ lists if there are any
+        
+        Each row will be dismantled into columns and we will put the columns as needed in args and then return
+        If there are extra_columns, than we return it in a seperate dict
+        """
+        fetched = []
+
+        command = "SELECT * FROM {};"
+        command = command.format(self.table_name)
+        res, conn = self._execute(command)
+        rows = res.fetchall()
+        conn.close()
+
+        for row in rows:
+            index = row[0]
+            basic_args = row[1:]
+            child_dc_values = self._fetch_dcs_from_sub_table(index)
+            list_values = self._fetch_lists_from_subtable(index)
+
+            item = self._build_item_from_values(index, basic_args, child_dc_values, list_values)
+            fetched.append(item)
+
+        return fetched
+
     def fetch_where(self, condition) -> List[Tuple[Any, Union[Dict, None]]]:
         """
         A cute function that returns a list where condition is met.
