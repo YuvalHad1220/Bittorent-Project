@@ -53,6 +53,7 @@ class Torrent:
     name: str
     file_path: str
     download_path: str
+    auto_decrypt: bool
     metadata: bytes
     is_torrentx: bool
     pieces_info: Pieces
@@ -102,21 +103,20 @@ def create_torrent(torrent_file_path, torrent_file_bytes, download_path, to_decr
     announce = decoded.pop(b'announce').decode()
     info = decoded.pop(b'info') 
 
+    # if multiple files - than we push a list that is filled with dicts such as {b'length: int, b'path: list[path]}
     if b'files' in info:
         file_list = create_files_path(info)
     else:
-        pass
+        file_list = create_files_path({b'files': [{b'length': info[b'length'],b'path': [info[b'name']]}]})
     
 
     
     name = info[b'name'].decode()
-    size = info[b'length']
     piece_size = info[b'piece length']
     pieces_list = pieces_list_from_bytes(info[b'pieces'])
     metadata = encode(decoded)
     is_torrentx = b'torrentx' in decoded
     pieces_obj = Pieces(piece_size, pieces_list)
+
     connection_info_obj = TorrentConnectionInfo(announce, types.started)
-    # return Torrent(name, size, is_torrentx, torrent_file_path,  download_path, metadata, pieces_obj, connection_info_obj)
-
-
+    return Torrent(name, torrent_file_path, download_path, to_decrypt, metadata, is_torrentx, pieces_obj, connection_info_obj, file_list)

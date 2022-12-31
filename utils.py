@@ -23,10 +23,11 @@ def pieces_list_from_bytes(pieces_bytes: bytes):
     pieces = [pieces_bytes[i:i+piece_size] for i in range(0, len(pieces_bytes), piece_size)]
     return pieces
 
-def create_if_path_not_exists(filename):
+def return_path(filename):
     path = pathlib.Path(filename)
     if not path.exists():
         path.mkdir()
+    return path
 
 
 def return_piece_size(file_size):

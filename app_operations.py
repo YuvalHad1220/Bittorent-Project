@@ -1,6 +1,6 @@
 from flask import Request
 from torrent import create_torrent
-from utils import create_if_path_not_exists
+from utils import return_path
 from torrent_handler import TorrentHandler
 def handle_torrent(request: Request, torrent_handler: TorrentHandler):
     download_path = request.form['downloadPath']
@@ -11,5 +11,11 @@ def handle_torrent(request: Request, torrent_handler: TorrentHandler):
     # iterate over each file. create it, add to torrent_handler, save file
     for torrent_file in torrent_files:
         content = torrent_file.read()
+        torrent_file.close()
+        
         torrent_obj = create_torrent(save_file_path, content, download_path, to_decrypt)
-        torrent_handler.add_torrent(torrent_obj)
+        if not torrent_handler.add_torrent(torrent_obj):
+            raise Exception("Error in adding torrent. error is in app_operations.py")
+
+        with open(return_path(save_file_path) / torrent_file.filename, 'wb') as f:
+            f.write(content)

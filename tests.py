@@ -2,8 +2,9 @@ import unittest
 from bencoding import *
 import string
 from utils import *
+from torrent import Torrent, create_torrent
 from dctodb import dctodb
-
+import time
 
 class TestBencode(unittest.TestCase):
 
@@ -147,7 +148,50 @@ class TestUtils(unittest.TestCase):
             places=4,
         )
 
+class TestDCtoDB(unittest.TestCase):
+    """
+    We will use our torrent classes. As long as we can fetch a torrent and its subitems, than all is good
+    """
+    db_path = "torrentTest.db"
+    def test_for_table_creation(self):
+        dctodb(Torrent, self.db_path)
+        # if no error is raised everything is good
 
+
+    """
+    INSERTION TIME MEASUREMENT:
+    1st iteration - no edits, no transcation (creating connection to db every function): 19.26 SECONDS
+
+    
+    """
+    def test_insert(self):
+        with open("test.torrent", 'rb') as f:
+            content = f.read()
+        torrent_obj = create_torrent("added_torrent_files",content, "download_folder", False)
+
+        torrent_db = dctodb(Torrent, self.db_path)
+        start_time = time.time()
+        torrent_db.insert_one(torrent_obj)
+        end_time = time.time()
+        print("INSERTION TIME: ", end_time-start_time)
+        self.assertEqual(torrent_db._get_count(), torrent_obj.index)
+    def test_fetch_where(self):
+        with open("test.torrent", 'rb') as f:
+            content = f.read()
+        torrent_obj = create_torrent("added_torrent_files",content, "download_folder", False)
+        torrent_db = dctodb(Torrent, self.db_path)
+        torrent_db.insert_one(torrent_obj)
+
+        fetched = torrent_db.fetch_where(f'id = {torrent_obj.index}')[0] 
+        self.assertDictEqual(torrent_obj.asdict(), fetched.asdict())
+
+    def test_fetch_all(self):
+        torrent_db = dctodb(Torrent, self.db_path)
+        total_items = torrent_db._get_count()
+
+        fetched = torrent_db.fetch_all()
+
+        self.assertEqual(total_items, len(fetched))
 
 
 if __name__ == "__main__":
