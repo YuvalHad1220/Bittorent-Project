@@ -64,21 +64,14 @@ class dctodb:
         self.dc: Type[Any] = dc
         self.db_filename: str = db_filename
         self.extra_columns = extra_columns  # won't be returned inside an object but in a dict next to the object
+        self.identifier = self.dc.__name__ + "index"
+        self.table_name = self.dc.__name__
         self.basic_fields, self.dc_fields, self.list_fields = _split_fields(self.dc)  # only fields that are not dcs or lists
         self.dc_in_class_mappings = dict()
         self.lists_in_class_mappings = dict()
         self._init_sub_class_connections()
-
         self.create_table()
-
-    @property
-    def table_name(self) -> str:
-        return self.dc.__name__
-
-    # a way for our childs to recognize us
-    @property
-    def identifier(self) -> str:
-        return self.dc.__name__ + "index"
+        self.transaction_connection = None
 
     def _execute(self, command, args=None):
         conn = _create_connection(self.db_filename)
@@ -146,7 +139,7 @@ class dctodb:
         Extra columns is a dict: {col_name: col_value}
         After we updated our own index, we can proceed to enter fields like dcs and lists
         """
-
+        
         command = "INSERT INTO {} ({}) VALUES ({});"
         # Remember, we will need to handle dataclasses and lists seperatley so we exclude them from now
         variable_names = [field.name for field in self.basic_fields if field.name != "index"]
@@ -156,6 +149,7 @@ class dctodb:
             variable_values.append(col_value)
 
         command = command.format(self.table_name, ', '.join(variable_names), ','.join(['?'] * len(variable_names)))
+
         _, conn = self._execute(command, variable_values)
         res = conn.commit()
         instance.index = self._get_count()

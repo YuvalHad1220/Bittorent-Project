@@ -18,16 +18,29 @@ sizes = {
     "TiB": 1024**4 * 8,
 }
 
-def pieces_list_from_bytes(pieces_bytes: bytes):
-    piece_size = 20 # each SHA-1 hash is 20 bytes
-    pieces = [pieces_bytes[i:i+piece_size] for i in range(0, len(pieces_bytes), piece_size)]
-    return pieces
+def get_home_directory():
+    return pathlib.Path.home()
+
+def load_file(filename, _type):
+    with open(pathlib.Path(filename), _type) as f:
+        return f.read()
+
+def write_to_file(filename, _type, content):
+    with open(pathlib.Path(filename), _type) as f:
+        f.write(content)
 
 def return_path(filename):
     path = pathlib.Path(filename)
     if not path.exists():
         path.mkdir()
     return path
+    
+def pieces_list_from_bytes(pieces_bytes: bytes):
+    piece_size = 20 # each SHA-1 hash is 20 bytes
+    pieces = [pieces_bytes[i:i+piece_size] for i in range(0, len(pieces_bytes), piece_size)]
+    return pieces
+
+
 
 
 def return_piece_size(file_size):
