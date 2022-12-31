@@ -1,11 +1,19 @@
 from flask import Flask, render_template, request, jsonify
-from torrent import Torrent
+from settings import read_settings_file
 from app_operations import handle_torrent
 from torrent_handler import TorrentHandler
 
 torrent_handler = TorrentHandler("torrent.db")
+settings = read_settings_file("settings.json")
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "df0331cefc6c2b9a5d0208a726a5d1c0fd37324feba25506"
+
+@app.route("/edit_settings", methods = ["GET", "POST"])
+def edit_settings():
+    if request.method == "GET":
+        return jsonify(settings.asdict())
+    
+    
 
 
 @app.route("/torrents", methods=["POST"])

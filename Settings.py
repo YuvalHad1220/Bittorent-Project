@@ -27,6 +27,8 @@ def create_settings_file(path):
     
 def read_settings_file(path):
     dic_file = load_file(path, 'r')
-    dic_file = loads(dic_file)
-    
-    return Settings(path = path, **dic_file)
+    if dic_file:
+        dic_file = loads(dic_file)
+        return Settings(path = path, **dic_file)
+    else:
+        return create_settings_file(path)

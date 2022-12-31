@@ -1,0 +1,63 @@
+<div id="modal-js-example" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+      <header class="modal-card-head">
+        <p class="modal-card-title">Client Settings</p>
+        <button class="delete" aria-label="close"></button>
+      </header>
+      <section class="modal-card-body">
+        <div class="container">
+
+        <form>
+          <div class="field">
+            <label class="label">Select Byte Type</label>
+            <div class="select">
+              <select>
+                <option selected>SI</option>
+                <option>IEC</option>
+                </select>
+                </div>
+
+              <span class="tag">SI = 1000 Bytes in a Kilobyte, IEC = 1024 Bytes in a Kilobyte</span>
+          </div>
+          <div class="field">
+            <label class="label">Download Path</label>
+            <div class="control">
+              <input class="input" id = "defaultdownloadPath" type="text" placeholder="Enter Default Download Path" required>
+            </div>
+
+          </div>
+          <div class="field">
+            <label class="label">Torrent Files Archive Folder</label>
+            <div class="control">
+              <input class="input" id = "defaultArchivePath" type="text" placeholder="Enter Default Torrent Archive Path" required>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">Torrentx File Size</label>
+            <input class="input" id = "defaultArchivePath" type="text" placeholder="Enter Default Torrentx Size" required>
+            <select class="select">
+              <option>KiB</option>
+              <option>MiB</option>
+            </select>
+            <span class="tag is-white">More pieces = bigger torrent file, less pieces = may be more difficult to download</span>
+          </div>
+          
+          <div class="field">
+            <label class="label">Select Port</label>
+            <div class="control">
+              <input class="input" id = "port" type="number" placeholder="Enter Default Port" required>
+            </div>
+          </div>
+        </form>
+
+
+        </div>
+      </section>
+      <footer class="modal-card-foot">
+        <button class="button is-success">Save</button>
+        <button class="button">Cancel</button>
+      </footer>
+    </div>
+  </div>

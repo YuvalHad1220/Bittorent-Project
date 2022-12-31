@@ -1,5 +1,7 @@
 <!--https://bulma.io/documentation/components/navbar/-->
-
+<script>
+    {% include 'modal.js' %}
+</script>
 <nav class="navbar is-dark" role="navigation" aria-label="main navbar">
     <div id="main-nav-items" class="navbar-menu">
         <div class="navbar-brand">
@@ -15,7 +17,7 @@
 
         <!-- aligned to right-->
         <div class="navbar-end">
-            <a class="navbar-item">Settings</a>
+            <a class="navbar-item js-modal-trigger" data-target="modal-js-example">Settings</a>
         </div>
         <div class="navbar-item">
                 <div class="buttons">

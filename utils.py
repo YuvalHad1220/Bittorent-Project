@@ -22,7 +22,10 @@ def get_home_directory():
     return pathlib.Path.home()
 
 def load_file(filename, _type):
-    with open(pathlib.Path(filename), _type) as f:
+    path = pathlib.Path(filename)
+    if not path:
+        return None
+    with open(path, _type) as f:
         return f.read()
 
 def write_to_file(filename, _type, content):
