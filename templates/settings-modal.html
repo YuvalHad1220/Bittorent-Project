@@ -12,8 +12,8 @@
           <div class="field">
             <label class="label">Select Byte Type</label>
             <div class="select">
-              <select>
-                <option selected>SI</option>
+              <select id="byteType" onchange="display_correct_torrent_size()">
+                <option>SI</option>
                 <option>IEC</option>
                 </select>
                 </div>
@@ -36,8 +36,8 @@
 
           <div class="field">
             <label class="label">Torrentx File Size</label>
-            <input class="input" id = "defaultArchivePath" type="text" placeholder="Enter Default Torrentx Size" required>
-            <select class="select">
+            <input class="input" id = "TorrentxSize" type="text" placeholder="Enter Default Torrentx Size" required>
+            <select class="select" id="fileSizeByteType">
               <option>KiB</option>
               <option>MiB</option>
             </select>
@@ -47,7 +47,7 @@
           <div class="field">
             <label class="label">Select Port</label>
             <div class="control">
-              <input class="input" id = "port" type="number" placeholder="Enter Default Port" required>
+              <input class="input" id ="port" type="text" placeholder="Enter Default Port" required>
             </div>
           </div>
         </form>
@@ -56,7 +56,7 @@
         </div>
       </section>
       <footer class="modal-card-foot">
-        <button class="button is-success">Save</button>
+        <button class="button is-success" onclick="update_settings()">Save</button>
         <button class="button">Cancel</button>
       </footer>
     </div>

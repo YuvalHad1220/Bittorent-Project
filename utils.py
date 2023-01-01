@@ -6,6 +6,19 @@ NOTE: need to configure to use si\decimal method
 """
 import pathlib
 
+class torrent_types:
+    started = "STARTED"
+    downloading = "DOWNLOADING"
+    uploading = "SEEDING"
+    stopped = "STOPPED"
+    cant_download = "CHALKED"
+    udp = "UDP"
+    tcp = "TCP"
+
+class setting_types:
+    si = "SI"
+    iec = "IEC"
+
 sizes = {
     "b": 1,
     "Kib": 1024,
@@ -20,10 +33,11 @@ sizes = {
 
 def get_home_directory():
     return pathlib.Path.home()
-
+def get_cwd_directory():
+    return pathlib.Path.cwd()
 def load_file(filename, _type):
     path = pathlib.Path(filename)
-    if not path:
+    if not path.exists():
         return None
     with open(path, _type) as f:
         return f.read()

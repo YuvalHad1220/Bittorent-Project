@@ -2,15 +2,7 @@ from dataclasses import dataclass, field
 from typing import List
 from bencoding import decode, encode
 from utils import pieces_list_from_bytes
-
-class types:
-    started = "STARTED"
-    downloading = "DOWNLOADING"
-    uploading = "SEEDING"
-    stopped = "STOPPED"
-    cant_download = "CHALKED"
-    udp = "UDP"
-    tcp = "TCP"
+from utils import torrent_types as types
 
 
 @dataclass
