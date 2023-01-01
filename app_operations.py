@@ -19,3 +19,7 @@ def handle_torrent(request: Request, torrent_handler: TorrentHandler):
 
         with open(return_path(save_file_path) / torrent_file.filename, 'wb') as f:
             f.write(content)
+
+            
+def update_settings(settings_obj, request):
+    settings_obj.update_settings(**request.get_json())

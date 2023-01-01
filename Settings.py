@@ -1,11 +1,14 @@
 from dataclasses import dataclass, asdict
 from json import dumps, loads
-from utils import load_file, write_to_file, get_home_directory, get_cwd_directory
+from utils import load_file, write_to_file, get_home_directory, get_cwd_directory, rand_str
 @dataclass
 class Settings:
     path: str
     default_download_path: str
     default_file_archive_path: str
+    user_agent: str = "-qB4450-"
+    random_id: str = rand_str(12)
+    peer_id: str = "qBittorrent/4.4.5"
     port: int = 25565
     size_calc: str = "SI"
     max_torrentx_file_size: int = 15000000

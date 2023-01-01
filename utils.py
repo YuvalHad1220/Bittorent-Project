@@ -5,7 +5,8 @@ https://www.reddit.com/r/torrents/comments/dzxfz1/2019_whats_ideal_piece_size/
 NOTE: need to configure to use si\decimal method
 """
 import pathlib
-
+import random
+import string
 class torrent_types:
     started = "STARTED"
     downloading = "DOWNLOADING"
@@ -30,6 +31,11 @@ sizes = {
     "GiB": 1024**3 * 8,
     "TiB": 1024**4 * 8,
 }
+
+def rand_str(length):
+    return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
+
+
 
 def get_home_directory():
     return pathlib.Path.home()

@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from settings import read_settings_file
-from app_operations import handle_torrent
+from app_operations import *
 from torrent_handler import TorrentHandler
 
 torrent_handler = TorrentHandler("torrent.db")
@@ -13,7 +13,7 @@ def edit_settings():
     if request.method == "GET":
         return jsonify(settings.asdict())
 
-    settings.update_settings(**request.get_json())
+    update_settings(settings, request.get_json())
     return {}
 
 
