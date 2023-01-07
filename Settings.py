@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
 from json import dumps, loads
 from utils import load_file, write_to_file, get_home_directory, get_cwd_directory, rand_str
+
 @dataclass
 class Settings:
     path: str

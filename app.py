@@ -2,6 +2,10 @@ from flask import Flask, render_template, request, jsonify
 from settings import read_settings_file
 from app_operations import *
 from torrent_handler import TorrentHandler
+from utils import get_client_list
+
+SUCCESS = {"success": True}
+FAILURE = {"success": False}
 
 torrent_handler = TorrentHandler("torrent.db")
 settings = read_settings_file("settings.json")
@@ -14,8 +18,13 @@ def edit_settings():
         return jsonify(settings.asdict())
 
     update_settings(settings, request.get_json())
-    return {}
+    
+    return SUCCESS
 
+
+@app.route('/get_available_clients', methods = ["GET"])
+def get_available_clients():
+    return get_client_list(False)
 
 
 @app.route("/torrents", methods=["POST"])

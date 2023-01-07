@@ -154,8 +154,42 @@ function update_settings(){
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json'
-    },
+    }
 });
 
 console.log(resp);
+}
+
+async function fetchOptions(gt) {
+  // URL of the API that returns the list of options
+  const apiUrl = "http://127.0.0.1:12345/get_available_clients";
+
+  // Fetch the list of options from the API
+  fetch(apiUrl, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
+  }).then(data => data.json())
+  .then(jsoned_list => {
+      // Get the select element
+      var select = document.getElementById("spoofingVersion");
+
+      // Clear the existing options
+      select.innerHTML = "";
+
+      // Add the new options to the select element
+      jsoned_list.forEach(option => {
+        var optionElement = document.createElement("option");
+        optionElement.value = option[0];
+        optionElement.text = option[1];
+        select.add(optionElement);
+      })
+    });
+
+    // .then(response => response.json())
+    // .then(data => {
+    //   alert(data)
+
 }

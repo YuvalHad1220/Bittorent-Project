@@ -7,6 +7,10 @@ NOTE: need to configure to use si\decimal method
 import pathlib
 import random
 import string
+import requests
+import re
+import json
+
 class torrent_types:
     started = "STARTED"
     downloading = "DOWNLOADING"
@@ -19,6 +23,27 @@ class torrent_types:
 class setting_types:
     si = "SI"
     iec = "IEC"
+
+def fetch_versions():
+    request = "https://github.com/qbittorrent/qBittorrent/tags"
+
+    response = requests.get(request)
+    content = response.text
+
+    pattern = r"release-[0-9]\.[0-9]\.[0-9]"
+
+    matches = re.findall(pattern, content)
+    matches = list(set(matches))
+
+    return matches
+
+def as_peer_id_user_agent(match):
+    x, y, z = match.split("-")[1].split(".")
+    peer_id = "-qB" + x + y + z + "-"
+    user_agent = "qBittorrent/" + x + "." + y + "." + z
+
+    return peer_id, user_agent
+
 
 sizes = {
     "b": 1,
@@ -83,3 +108,15 @@ def return_piece_size(file_size):
             return {"size": size}
 
     return {"size": 32 * sizes["Mib"]}
+
+def get_client_list(reload = False):
+    versions = load_file("versions.json", "r")
+    if not versions or reload:
+        to_ret = fetch_versions()
+        write_to_file("versions.json", "w", json.dumps(to_ret))
+        return [as_peer_id_user_agent(match) for match in to_ret]
+
+
+    versions = json.loads(versions)
+    return [as_peer_id_user_agent(match) for match in versions]
+    
