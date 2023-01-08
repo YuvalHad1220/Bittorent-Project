@@ -1,14 +1,14 @@
 from flask import Flask, render_template, request, jsonify
-from settings import read_settings_file
+from settings.settings import read_settings_file
 from app_operations import *
-from torrent_handler import TorrentHandler
+from database.torrent_handler import TorrentHandler
 from utils import get_client_list
 
 SUCCESS = {"success": True}
 FAILURE = {"success": False}
 
-torrent_handler = TorrentHandler("torrent.db")
-settings = read_settings_file("settings.json")
+torrent_handler = TorrentHandler("./database/torrent.db")
+settings = read_settings_file("./settings/settings.json")
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "df0331cefc6c2b9a5d0208a726a5d1c0fd37324feba25506"
 
@@ -17,7 +17,7 @@ def edit_settings():
     if request.method == "GET":
         return jsonify(settings.asdict())
 
-    update_settings(settings, request.get_json())
+    update_settings(settings, request)
     
     return SUCCESS
 

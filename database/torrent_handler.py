@@ -1,4 +1,4 @@
-from dctodb import dctodb
+from database.dctodb import dctodb
 from torrent import Torrent
 
 """

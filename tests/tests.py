@@ -3,7 +3,7 @@ from bencoding import *
 import string
 from utils import *
 from torrent import Torrent, create_torrent
-from dctodb import dctodb
+from database.dctodb import dctodb
 import time
 
 class TestBencode(unittest.TestCase):

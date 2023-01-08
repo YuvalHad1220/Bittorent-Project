@@ -1,7 +1,7 @@
 from flask import Request
 from torrent import create_torrent
 from utils import return_path
-from torrent_handler import TorrentHandler
+from database.torrent_handler import TorrentHandler
 def handle_torrent(request: Request, torrent_handler: TorrentHandler):
     download_path = request.form['downloadPath']
     to_decrypt = True if request.form['toDecrypt'] == 'True' else False

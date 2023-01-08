@@ -66,13 +66,8 @@ async function load_settings_into_fields(){
 }
 function humanFileSize(bytes, si, dp=1) {
   const thresh = si ? 1000 : 1024;
-
-  if (Math.abs(bytes) < thresh) {
-    return bytes + ' B';
-  }
-
   const units = si 
-    ? ['KB', 'MB']
+    ? ['KB'.toUpperCase(), 'MB'.toUpperCase()]
     : ['KiB', 'MiB'];
   let u = -1;
   const r = 10**dp;
@@ -82,13 +77,15 @@ function humanFileSize(bytes, si, dp=1) {
     ++u;
   } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
 
-
-  return bytes.toFixed(dp) + ' ' + units[u];
+  
+  alert (bytes.toFixed(dp) + ' ' + units[u]);
+  return [1,2]
 }
 
 function display_correct_torrent_size(){
-  var old_type = "SI";
+  var old_type = null;
   if (document.getElementById('byteType').value == "IEC"){
+    old_type = "SI";
     var options = document.getElementById('fileSizeByteType');
     options[0].value = "KiB";
     options[0].text = "KiB";
@@ -97,6 +94,7 @@ function display_correct_torrent_size(){
   }
 
   if (document.getElementById('byteType').value == "SI"){
+    old_type = "IEC";
     var options = document.getElementById('fileSizeByteType');
     options[0].value = "KB";
     options[0].text = "KB";
@@ -108,8 +106,7 @@ function display_correct_torrent_size(){
   parse_torrent_size();
 }
 function torrent_size_to_bytes(old_type){
-  var bool = (old_type == "SI");
-  var thresh = bool ? 1000 : 1024;
+  var thresh = old_type == "SI" ? 1000 : 1024;
   var kbmbindex = document.getElementById('fileSizeByteType').selectedIndex;
   var oldval = document.getElementById('TorrentxSize').value;
   thresh = thresh ** (1+kbmbindex);
@@ -117,8 +114,7 @@ function torrent_size_to_bytes(old_type){
 
 }
 function _torrent_size_to_bytes(){
-  var bool =document.getElementById('byteType').value == "SI"
-  var thresh = bool ? 1000 : 1024;
+  var thresh = document.getElementById('byteType').value == "SI" ? 1000 : 1024;
   var kbmbindex = document.getElementById('fileSizeByteType').selectedIndex;
   var oldval = document.getElementById('TorrentxSize').value;
   thresh = thresh ** (1+kbmbindex);
@@ -131,7 +127,23 @@ function parse_torrent_size(){
     // now that we have the correct size type we also need to show the correct torrent file size
     torrentx_max_size = parseInt(document.getElementById('TorrentxSize').value);
     var bool = document.getElementById('byteType').value == "SI";
+    // if (bool){
+    //     var options = document.getElementById('fileSizeByteType');
+    //     options[0].value = "KB";
+    //     options[0].text = "KB";
+    //     options[1].value = "MB";
+    //     options[1].text = "MB";
+    //   }
+    //   else {
+    //     var options = document.getElementById('fileSizeByteType');
+    //     options[0].value = "KiB";
+    //     options[0].text = "KiB";
+    //     options[1].value = "MiB";
+    //     options[1].text = "MiB";
+      
+    // }
     torrent_size_arr = humanFileSize(torrentx_max_size, bool).split(' ');
+    alert(torrent_size_arr);
     document.getElementById('fileSizeByteType').value = torrent_size_arr[1];
     document.getElementById('TorrentxSize').value = torrent_size_arr[0];
 }
@@ -157,10 +169,9 @@ function update_settings(){
     }
 });
 
-console.log(resp);
 }
 
-async function fetchOptions(gt) {
+async function fetchOptions() {
   // URL of the API that returns the list of options
   const apiUrl = "http://127.0.0.1:12345/get_available_clients";
 
