@@ -12,7 +12,7 @@
           <div class="field">
             <label class="label">Select Byte Type</label>
             <div class="select">
-              <select id="byteType" onchange="display_correct_torrent_size()">
+              <select id="byteType" onchange="update_type()">
                 <option>SI</option>
                 <option>IEC</option>
                 </select>
@@ -36,7 +36,7 @@
 
           <div class="field">
             <label class="label">Torrentx File Size</label>
-            <input class="input" id = "TorrentxSize" type="text" placeholder="Enter Default Torrentx Size" required>
+            <input class="input" id = "TorrentxSize" type="text" placeholder="Enter Default Torrentx Size" required oninput="update_size()">
             <select class="select" id="fileSizeByteType">
               <option>KiB</option>
               <option>MiB</option>
