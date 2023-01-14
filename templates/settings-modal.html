@@ -36,7 +36,7 @@
 
           <div class="field">
             <label class="label">Torrentx File Size</label>
-            <input class="input" id = "TorrentxSize" type="text" placeholder="Enter Default Torrentx Size" required oninput="update_size()">
+            <input class="input" id = "TorrentxSize" type="text" placeholder="Enter Default Torrentx Size" required>
             <select class="select" id="fileSizeByteType">
               <option>KiB</option>
               <option>MiB</option>
@@ -57,14 +57,19 @@
             <div class="control">
               <div class="select">
                 <select id="spoofingVersion">
-                  
                 </select>
               </div>
               <button class="button is-link" type="button" onclick="fetchOptions()">Fetch List for Me</button>
             </div>
           </div>
+          <div class="field">
+            <label class="label">Random Peer ID</label>
+            <div class="control">
+              <input class="input" id="randomPeerId" type="text" placeholder="Enter Random Peer ID" required>
+              <button class="button is-link" type="button" onclick="generateRandomId()">Generate Random ID</button>
+            </div>
+          </div>
 
-          
         </form>
 
 

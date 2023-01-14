@@ -3,7 +3,7 @@ from settings.settings import read_settings_file
 from app_operations import *
 from database.torrent_handler import TorrentHandler
 from utils import get_client_list
-
+from connection_handlers.trakcer_request_handler import _announce_legacy_start_udp
 SUCCESS = {"success": True}
 FAILURE = {"success": False}
 
@@ -11,6 +11,12 @@ torrent_handler = TorrentHandler("./database/torrent.db")
 settings = read_settings_file("./settings/settings.json")
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "df0331cefc6c2b9a5d0208a726a5d1c0fd37324feba25506"
+
+if __name__ == "__main__":
+    udp_torrent = torrent_handler.get_torrents()[0]
+    assert udp_torrent.connection_info.tracker_type == "UDP"
+    _announce_legacy_start_udp(udp_torrent, settings)
+
 
 @app.route("/edit_settings", methods = ["GET", "POST"])
 def edit_settings():
@@ -49,7 +55,7 @@ def add_torrent():
         handle_torrent(request, torrent_handler)
 
 
-    return render_template("add-torrent-files-page.html")
+    return render_template("add-torrent-files-page.html", default_download_path = settings.default_download_path)
 
 
 @app.route("/", methods=["GET"])

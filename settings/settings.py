@@ -23,12 +23,20 @@ class Settings:
         write_to_file(self.path, 'w', dumps(self.asdict(), indent=4))
 
     def update_settings(self, **kwargs):
-        print(kwargs)
-        self.default_download_path = kwargs['default_download_path']
-        self.default_file_archive_path= kwargs['default_file_archive_path']
-        self.port = kwargs['port']
-        self.max_torrentx_file_size = kwargs['max_torrentx_file_size']
-        self.size_calc = kwargs['size_calc']
+        for key,value in kwargs.items():
+            print(key, value)
+            setattr(self, key, value)
+            print(getattr(self, key))
+
+        
+        # self.default_download_path = kwargs['default_download_path']
+        # self.default_file_archive_path= kwargs['default_file_archive_path']
+        # self.port = kwargs['port']
+        # self.max_torrentx_file_size = kwargs['max_torrentx_file_size']
+        # self.size_calc = kwargs['size_calc']
+        # self.peer_id = kwargs['peer_id']
+        # self.random_id = kwargs['random_id']
+        # self.
 
         self.update()
 def create_settings_file(path):
