@@ -1,11 +1,47 @@
 from torrent import Torrent
+from typing import List
+import aioudp
+import asyncio
 from settings.settings import Settings
 import struct
-import socket
 import requests
 from bencoding import decode
-
+import socket
 PROT_ID = 0x41727101980
+
+
+def split_torrent_list(torrent_list: List[Torrent]):
+    udp_torrents = []
+    http_torrents = []
+
+    for torrent in torrent_list:
+        if "udp://" in torrent.connection_info.announce_url:
+            udp_torrents.append(torrent)
+        else:
+            http_torrents.append(torrent)
+
+    return udp_torrents, http_torrents
+
+
+async def udp_loop(udp_torrents_list):
+    pass
+
+
+async def http_loop(http_torrents_list):
+    pass
+
+async def main_loop(torrent_list):
+
+    udp_torrents , http_torrents = split_torrent_list()
+
+    # udp_torrents_legacy, udp_torrentx = 
+    # http_torrents_legacy, http_torrentsx = 
+    
+    udp_torrents_loop = asyncio.create_task(udp_loop(udp_torrents))
+    http_torrents_loop = asyncio.create_task(http_loop(http_torrents))
+    await asyncio.gather(udp_torrents_loop, http_torrents_loop)
+
+
 
 ANNOUNCE_TABLE_HTTP = {
     "START": "started",
@@ -129,13 +165,6 @@ def build_conn_struct(settings: Settings):
     trans_id = settings.random_id[:4].encode()
     return struct.pack("! q l 4s x", PROT_ID, action, trans_id)
 
-def init_conn(message, addr):
-    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp_socket.sendto(message, addr)
-    response, addr = udp_socket.recvfrom(128)
-
-    return response, udp_socket
-
 def vaildated_conn_id(message):
     # response should be:
     # 4 bytes action (value 0 since we just connected)
@@ -145,7 +174,14 @@ def vaildated_conn_id(message):
 
     return conn_id, trans_id_recv
 
-def announce_udp_legacy(torrent: Torrent, event: str, settings: Settings):
+async def init_conn(message, addr):
+    remote_conn = await aioudp.open_remote_endpoint(*addr)
+
+    remote_conn.send(message)
+    data = await remote_conn.receive()
+    return data, remote_conn
+
+async def announce_udp_legacy(torrent: Torrent, event: str, settings: Settings):
     announce_data = torrent.connection_info.announce_url
     announce_data = announce_data.replace("udp://","")
     announce_url, port = announce_data.split(":")
@@ -153,32 +189,43 @@ def announce_udp_legacy(torrent: Torrent, event: str, settings: Settings):
     addr = (announce_url, port)
 
     init_conn_msg = build_conn_struct(settings)
-    resp, conn_socket = init_conn(init_conn_msg, addr)
+    resp, remote_conn = await init_conn(init_conn_msg, addr)
     conn_id, trans_id = vaildated_conn_id(resp)
-
         
     message = build_announce_struct(torrent, event, settings, conn_id, trans_id)
-    conn_socket.sendto(message, addr)
-    response, addr = conn_socket.recvfrom(1024)
-
-
+    remote_conn.send(message)
+    response = await remote_conn.receive()
 
     # now we need to construct our announcing data
+    print( parse_announce_resp_struct(response))
     return parse_announce_resp_struct(response)
 
     
 
-async def announce_start_udp(*instances):
-    pass
 
-async def announce_resume_http(aiohttp_client,*instances):
-    pass
 
-async def announce_resume_udp(*instances):
-    pass
 
-async def announce_finish_http(aiohttp_client,*instances):
-    pass
 
-async def announce_finish_udp(*instances):
-    pass
+
+
+
+
+
+
+
+
+
+# async def announce_start_udp(*instances):
+#     pass
+
+# async def announce_resume_http(aiohttp_client,*instances):
+#     pass
+
+# async def announce_resume_udp(*instances):
+#     pass
+
+# async def announce_finish_http(aiohttp_client,*instances):
+#     pass
+
+# async def announce_finish_udp(*instances):
+#     pass
