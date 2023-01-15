@@ -20,6 +20,12 @@ class torrent_types:
     udp = "UDP"
     tcp = "TCP"
 
+class announce_types:
+    start = "START"
+    finish = "FINISH"
+    resume = "RESUME"
+    stop = "STOP"
+
 class setting_types:
     si = "SI"
     iec = "IEC"
