@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     res = asyncio.run(announce_http_legacy(tcp_torrent, announce_types.start, settings))
     peer_list = res[3]
-    get_piece(tcp_torrent, 0, peer_list, settings)
+    asyncio.run(get_piece(tcp_torrent, 0, peer_list, settings))
 
 @app.route("/edit_settings", methods = ["GET", "POST"])
 def edit_settings():
