@@ -26,7 +26,7 @@ from typing import List
 from utils import rand_str
 import struct
 import socket
-
+import requests
 PROT_ID = 0x41727101980
 # A thread should start that def:
 async def main(torrent_handler: TorrentHandler):
@@ -47,34 +47,33 @@ def _split_udp_http(to_announce_list):
 All of these function should reduce to a couple of functions: announce_udp, announce_http, announce_multiple_udp, announce_multiple_http
 """
 
-# async def announce_start_http(aiohttp_client: aiohttp.ClientSession, *torrents: List[Torrent]):
-#     pass
+async def announce_start_http(aiohttp_client: aiohttp.ClientSession, *torrents: List[Torrent]):
+    pass
 
-# async def _announce_legacy_start_http(aiohttp_client: aiohttp.ClientSession, *torrents: List[Torrent]):
-#     HTTP_HEADERS = {
-#         "Accept-Encoding": "gzip",
-#         "User-Agent": client.user_agent
-#     }
+async def _announce_legacy_start_http(torrent: Torrent, settings: Settings):
+    HTTP_HEADERS = {
+        "Accept-Encoding": "gzip",
+        "User-Agent": settings.user_agent
+    }
 
-#     HTTP_PARAMS = {
-#         "info_hash": urllib.parse.quote_from_bytes(torrent.info_hash),
-#         "peer_id": client.peer_id + client.rand_id,
-#         "port": client.port,
-#         "uploaded": int(torrent.uploaded),
-#         "downloaded": int(torrent.downloaded),
-#         "left": int(torrent.size - torrent.downloaded),
-#         "event": 
-#         "compact": 1,
-#         "numwant": 200,
-#         "supportcrypto": 1,
-#         "no_peer_id": 1
-#     }
+    HTTP_PARAMS = {
+        "info_hash": torrent.info_hash,
+        "peer_id": settings.peer_id + settings.rand_id,
+        "port": settings.port,
+        "uploaded": torrent.uploaded,
+        "downloaded": torrent.downloaded,
+        "left": torrent.size - torrent.downloaded,
+        "event": "started",
+        "compact": 1,
+        "numwant": 200,
+        "supportcrypto": 1,
+        "no_peer_id": 1
+    }
 
-#     async with aiohttp_client.get(url= torrents.announce_url, headers = HTTP_HEADERS) as resp:
-#         content = await resp.read()
-#         info = decode(content)
+    res = requests.get(url= torrent.announce_url, headers = HTTP_HEADERS)
+    print(res)
 
-#         update_decoded(info, torrent)
+
 def _announce_to_struct_udp_legacy(event, torrent: Torrent, settings: Settings, conn_id, trans_id):
     if event == "start":
         event_param = 2
@@ -92,6 +91,7 @@ def _announce_to_struct_udp_legacy(event, torrent: Torrent, settings: Settings, 
     # 20 bytes peer_id
     # 8 bytes downloaded
     # 8 bytes left
+    # 8 bytes uploaded
     # 4 bytes event 
     # 4 bytes ip (0 to use sender id)
     # 4 bytes random key
@@ -102,7 +102,7 @@ def _announce_to_struct_udp_legacy(event, torrent: Torrent, settings: Settings, 
 
     return struct.pack("! q i 4s 20s 20s q q q i i i i H x",
                      conn_id, 1, trans_id, torrent.info_hash, peer_id,
-                     0, torrent.size, event_param, 0, key, -1, settings.port, 0)
+                     torrent.downloaded, torrent.size - torrent.downloaded, torrent.uploaded event_param, 0, key, -1, settings.port, 0)
 
 def unpack_start_announce_struct_data(message):
      # 4 bytes action
