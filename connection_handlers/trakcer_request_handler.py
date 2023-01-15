@@ -27,6 +27,7 @@ from utils import rand_str
 import struct
 import socket
 import requests
+from bencoding import decode
 PROT_ID = 0x41727101980
 # A thread should start that def:
 async def main(torrent_handler: TorrentHandler):
@@ -50,15 +51,16 @@ All of these function should reduce to a couple of functions: announce_udp, anno
 async def announce_start_http(aiohttp_client: aiohttp.ClientSession, *torrents: List[Torrent]):
     pass
 
-async def _announce_legacy_start_http(torrent: Torrent, settings: Settings):
+def _announce_legacy_start_http(torrent: Torrent, settings: Settings):
     HTTP_HEADERS = {
         "Accept-Encoding": "gzip",
-        "User-Agent": settings.user_agent
+        "User-Agent": settings.peer_id,
+        "Connection": "keep-alive"
     }
 
     HTTP_PARAMS = {
         "info_hash": torrent.info_hash,
-        "peer_id": settings.peer_id + settings.rand_id,
+        "peer_id": settings.user_agent + settings.random_id,
         "port": settings.port,
         "uploaded": torrent.uploaded,
         "downloaded": torrent.downloaded,
@@ -70,9 +72,21 @@ async def _announce_legacy_start_http(torrent: Torrent, settings: Settings):
         "no_peer_id": 1
     }
 
-    res = requests.get(url= torrent.announce_url, headers = HTTP_HEADERS)
-    print(res)
+    res = requests.get(torrent.connection_info.announce_url, headers = HTTP_HEADERS, params=HTTP_PARAMS)
+    res = res.content
 
+    res = decode(res)[0]
+    result = []
+
+    peers = res[b"peers"]
+    for i in range(len(peers)//6):
+        ip = peers[i:i+4]
+        ip = '.'.join("%d" %x for x in ip)
+        port = peers[i+4:i+6]
+        port = struct.unpack(">H", port)[0]
+        result.append("%s:%d" % (ip, port))
+
+    print(result)
 
 def _announce_to_struct_udp_legacy(event, torrent: Torrent, settings: Settings, conn_id, trans_id):
     if event == "start":
@@ -100,9 +114,9 @@ def _announce_to_struct_udp_legacy(event, torrent: Torrent, settings: Settings, 
     # 4 bytes extenstions
     # 1 byte padding
 
-    return struct.pack("! q i 4s 20s 20s q q q i i i i H x",
+    return struct.pack("! q i 4s 20s 20s q q q i i i i H i x",
                      conn_id, 1, trans_id, torrent.info_hash, peer_id,
-                     torrent.downloaded, torrent.size - torrent.downloaded, torrent.uploaded event_param, 0, key, -1, settings.port, 0)
+                     torrent.downloaded, torrent.size - torrent.downloaded, torrent.uploaded, event_param, 0, key, -1, settings.port, 0)
 
 def unpack_start_announce_struct_data(message):
      # 4 bytes action

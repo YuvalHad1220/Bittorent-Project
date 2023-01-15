@@ -95,9 +95,6 @@ def create_torrent(torrent_file_path, torrent_file_bytes, download_path, to_decr
     announce = decoded.pop(b'announce').decode()
     info = decoded.pop(b'info')
     torrent_hash = hashlib.sha1(encode(info)).digest()
-    print(torrent_hash)
-    print(type(torrent_hash))
-    print(len(torrent_hash))
     # if multiple files - than we push a list that is filled with dicts such as {b'length: int, b'path: list[path]}
     if b'files' in info:
         file_list = create_files_path(info)
