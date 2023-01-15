@@ -3,7 +3,7 @@ from typing import List
 from bencoding import decode, encode
 from utils import pieces_list_from_bytes
 from utils import torrent_types as types
-
+import hashlib
 
 @dataclass
 class TorrentConnectionInfo:
@@ -43,6 +43,7 @@ class File:
 @dataclass
 class Torrent:
     name: str
+    info_hash: bytes
     file_path: str
     download_path: str
     auto_decrypt: bool
@@ -60,7 +61,6 @@ class Torrent:
     def size(self):
         return sum(map(lambda x: x.size, self.files))
 
-    # in final project this will be replaced with custom asdict
     def asdict(self) -> dict:
         return {
             "index": self.index,
@@ -93,8 +93,11 @@ def create_files_path(info_decoded) -> List[File]:
 def create_torrent(torrent_file_path, torrent_file_bytes, download_path, to_decrypt):
     decoded: dict = decode(torrent_file_bytes)[0]
     announce = decoded.pop(b'announce').decode()
-    info = decoded.pop(b'info') 
-
+    info = decoded.pop(b'info')
+    torrent_hash = hashlib.sha1(encode(info)).digest()
+    print(torrent_hash)
+    print(type(torrent_hash))
+    print(len(torrent_hash))
     # if multiple files - than we push a list that is filled with dicts such as {b'length: int, b'path: list[path]}
     if b'files' in info:
         file_list = create_files_path(info)
@@ -102,7 +105,6 @@ def create_torrent(torrent_file_path, torrent_file_bytes, download_path, to_decr
         file_list = create_files_path({b'files': [{b'length': info[b'length'],b'path': [info[b'name']]}]})
     
 
-    
     name = info[b'name'].decode()
     piece_size = info[b'piece length']
     pieces_list = pieces_list_from_bytes(info[b'pieces'])
@@ -111,4 +113,4 @@ def create_torrent(torrent_file_path, torrent_file_bytes, download_path, to_decr
     pieces_obj = Pieces(piece_size, pieces_list)
 
     connection_info_obj = TorrentConnectionInfo(announce, types.started)
-    return Torrent(name, torrent_file_path, download_path, to_decrypt, metadata, is_torrentx, pieces_obj, connection_info_obj, file_list)
+    return Torrent(name, torrent_hash, torrent_file_path, download_path, to_decrypt, metadata, is_torrentx, pieces_obj, connection_info_obj, file_list)
