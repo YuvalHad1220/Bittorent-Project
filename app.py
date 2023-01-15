@@ -4,6 +4,7 @@ from app_operations import *
 from database.torrent_handler import TorrentHandler
 from utils import get_client_list, announce_types
 import asyncio
+from connection_handlers.peers_request_handler import *
 from connection_handlers.trakcer_request_handler import announce_http_legacy, announce_udp_legacy
 SUCCESS = {"success": True}
 FAILURE = {"success": False}
@@ -14,14 +15,17 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "df0331cefc6c2b9a5d0208a726a5d1c0fd37324feba25506"
 
 if __name__ == "__main__":
-    udp_torrent = torrent_handler.get_torrents()[0]
-    assert udp_torrent.connection_info.tracker_type == "UDP"
-    asyncio.run(announce_udp_legacy(udp_torrent, announce_types.start, settings))
+    # udp_torrent = torrent_handler.get_torrents()[0]
+    # assert udp_torrent.connection_info.tracker_type == "UDP"
+    # res = asyncio.run(announce_udp_legacy(udp_torrent, announce_types.start, settings))
 
-    # tcp_torrent = torrent_handler.get_torrents()[1]
-    # assert tcp_torrent.connection_info.tracker_type == "TCP"
-    # print(announce_http_legacy(tcp_torrent, announce_types.start, settings))
 
+    tcp_torrent = torrent_handler.get_torrents()[1]
+    assert tcp_torrent.connection_info.tracker_type == "TCP"
+
+    res = asyncio.run(announce_http_legacy(tcp_torrent, announce_types.start, settings))
+    peer_list = res[3]
+    get_piece(tcp_torrent, 0, peer_list, settings)
 
 @app.route("/edit_settings", methods = ["GET", "POST"])
 def edit_settings():

@@ -1,9 +1,11 @@
 from torrent import Torrent
 from typing import List
 import aioudp
+import aiohttp
 import asyncio
 from settings.settings import Settings
 import struct
+import urllib.parse
 import requests
 from bencoding import decode
 import socket
@@ -26,13 +28,14 @@ def split_torrent_list(torrent_list: List[Torrent]):
 async def udp_loop(udp_torrents_list):
     pass
 
-
 async def http_loop(http_torrents_list):
     pass
 
-async def main_loop(torrent_list):
-
-    udp_torrents , http_torrents = split_torrent_list()
+async def main_loop(torrent_handle):
+   # that loop will keep running - as we ge
+   while True:
+    torrent_list = torrent_handle.get_torrent_list() 
+    udp_torrents , http_torrents = split_torrent_list(torrent_list)
 
     # udp_torrents_legacy, udp_torrentx = 
     # http_torrents_legacy, http_torrentsx = 
@@ -57,11 +60,15 @@ ANNOUNCE_TABLE_UDP = {
     "STOP": 3
 }
 
-def announce_http_legacy(torrent: Torrent, event: str, settings: Settings):
+async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings):
     HEADERS = {
         "Accept-Encoding": "gzip",
         "User-Agent": settings.peer_id,
+        "Content-Type": "application/x-www-form-urlencoded"
     }
+
+    # asyncio does not support passing both bytes and int, so decoding bytes
+    #         "info_hash": base64.b64encode(torrent.info_hash).decode("ascii"),
 
     PARAMS = {
         "info_hash": torrent.info_hash,
@@ -76,15 +83,23 @@ def announce_http_legacy(torrent: Torrent, event: str, settings: Settings):
         "no_peer_id": 1
     }
 
+
     if ANNOUNCE_TABLE_HTTP[event]:
         PARAMS["event"] = ANNOUNCE_TABLE_HTTP[event]
 
-    res = requests.get(torrent.connection_info.announce_url, headers = HEADERS, params=PARAMS)
-    res = res.content
-    res = decode(res)[0]
-    interval = res[b"interval"]
+    # aiohttp_params = aiohttp.formdata.FormData()
+    # for key, val in PARAMS.items():
+    #     aiohttp_params.add_field(key, val)
 
-    peers = res[b"peers"]
+    # async with aiohttp.ClientSession() as aiohttp_client:
+    #     async with aiohttp_client.get(url= torrent.connection_info.announce_url, headers = HEADERS, data = PARAMS) as resp:
+    #         content = await resp.read()
+
+    content = requests.get(url= torrent.connection_info.announce_url, headers = HEADERS, params = PARAMS).content
+    content = decode(content)[0]
+    interval = content[b"interval"]
+
+    peers = content[b"peers"]
     peer_list_str = [peers[i:i+6] for i in range(0, len(peers), 6)]
     peer_list = []
     for peer_data in peer_list_str:
@@ -94,15 +109,15 @@ def announce_http_legacy(torrent: Torrent, event: str, settings: Settings):
 
         peer_list.append((ip, port))
 
-    if b"incomplete" not in res:
+    if b"incomplete" not in content:
         leechers = len(peer_list)
     else:
-        leechers = res[b"incomplete"]
+        leechers = content[b"incomplete"]
 
-    if b"complete" not in res:
+    if b"complete" not in content:
             seeders = 0
     else:
-        seeders = res[b"complete"]
+        seeders = content[b"complete"]
 
     return interval, leechers, seeders, peer_list
 
@@ -196,8 +211,8 @@ async def announce_udp_legacy(torrent: Torrent, event: str, settings: Settings):
     remote_conn.send(message)
     response = await remote_conn.receive()
 
+    remote_conn.close()
     # now we need to construct our announcing data
-    print( parse_announce_resp_struct(response))
     return parse_announce_resp_struct(response)
 
     
