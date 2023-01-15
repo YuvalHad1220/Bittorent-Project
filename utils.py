@@ -20,6 +20,18 @@ class torrent_types:
     udp = "UDP"
     tcp = "TCP"
 
+class msg_types:
+    msg_choke = 0
+    msg_unchoke = 1
+    msg_interested = 2
+    msg_not_interested = 3
+    msg_have = 4
+    msg_bitfield = 5
+    msg_request = 6
+    msg_piece = 7
+    msg_cancel = 8
+
+    
 class announce_types:
     start = "START"
     finish = "FINISH"
