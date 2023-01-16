@@ -8,6 +8,7 @@ import pathlib
 import random
 import string
 import requests
+import urllib
 import re
 import json
 
@@ -41,6 +42,15 @@ class announce_types:
 class settingtypes:
     si = "SI"
     iec = "IEC"
+
+
+# since aiohttp doesnt support sending sha-1 hashes, we encode it properly ourselves 
+# we return the params and the headers as just headers
+def encode_params_with_url(params_dict, url):
+    params = urllib.parse.urlencode(params_dict)
+    params = params.replace("%25", "%")
+    return f"{url}?{params}"
+
 
 def fetch_versions():
     request = "https://github.com/qbittorrent/qBittorrent/tags"

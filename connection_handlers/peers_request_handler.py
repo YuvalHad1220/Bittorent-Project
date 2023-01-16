@@ -11,11 +11,10 @@ from utils import msg_types
 async def ask_bitfield(torrent: Torrent, peer_address):
     reader, writer = await asyncio.open_connection(*peer_address)
 
+    pieces_amount = len(torrent.pieces_info.pieces_hashes)
 
-    pieces_len = len(torrent.pieces_info.pieces_hashes)
-
-    num_bytes_on = pieces_len // 8
-    last_byte_bits_on = pieces_len % 8
+    num_bytes_on = pieces_amount // 8
+    last_byte_bits_on = pieces_amount % 8
 
     bitfield_byte_object = bytes([0xff]*num_bytes_on)
 
