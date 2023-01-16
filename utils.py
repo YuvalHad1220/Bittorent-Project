@@ -32,6 +32,8 @@ class msg_types:
     piece = 7
     cancel = 8
 
+# # a list but we will look at it like a dict where each index is a key
+# msg_dict = list(msg_types.__dict__.keys())
     
 class announce_types:
     start = "START"

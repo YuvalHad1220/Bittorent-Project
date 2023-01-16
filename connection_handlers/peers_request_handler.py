@@ -8,11 +8,24 @@ import struct
 import asyncio
 from utils import msg_types
 
-async def ask_bitfield(torrent: Torrent, peer_address):
-    reader, writer = await asyncio.open_connection(*peer_address)
 
+
+async def read_message(reader):
+    # 4 first bytes are length
+    # 5th byte is type
+
+    res = await reader.read(4)
+    msg_len = struct.unpack(">I", res)[0] # unpack the message length
+    data = await reader.read(msg_len) # receive the rest of the message
+    msg_id = data[0] 
+
+    if msg_id == msg_types.bitfield:
+        return data[1:]
+
+
+
+async def ask_bitfield(torrent: Torrent, writer, reader):
     pieces_amount = len(torrent.pieces_info.pieces_hashes)
-
     num_bytes_on = pieces_amount // 8
     last_byte_bits_on = pieces_amount % 8
 
@@ -22,22 +35,29 @@ async def ask_bitfield(torrent: Torrent, peer_address):
         byte = (0xff << last_byte_bits_on) & 0xff
         bitfield_byte_object += bytes([byte])
 
-    # asking_pieces_str = ''.join(['{:08b}'.format(b) for b in bitfield_byte_object])
-
-
     msg_id = msg_types.bitfield
     total_msg_len = 4 + 1 + len(bitfield_byte_object) 
     # 4 bytes -> messeage len
     # 1 byte -> message id
     # rest - optional payload (in this case: each byte represents 8 pieces we ask for)
     packed_struct = struct.pack(f'> i b {len(bitfield_byte_object)}s', total_msg_len, msg_id, bitfield_byte_object)
+    asking_pieces_str = ''.join(['{:08b}'.format(b) for b in packed_struct])
 
     writer.write(packed_struct)
     await writer.drain()
-    res = await reader.read(199)
-    print(len(res))
-    unpacked_struct = struct.unpack(f'> i b {len(bitfield_byte_object)}s', res)
-    print(unpacked_struct)
+    avaiable_bitfields = await read_message(reader)
+    print(avaiable_bitfields)
+    print(bitfield_byte_object)
+    avaiable_pieces_str = ''.join(['{:08b}'.format(b) for b in avaiable_bitfields])
+
+    print("peer has sent a relevant result. now we want to compare which pieces it has and which not")
+
+    # we want to run on the min length, as we sending padded bits in our request but peer does not send padded bits in his response
+    for i in range(min(len(avaiable_pieces_str), len(asking_pieces_str))):
+        if avaiable_bitfields[i] != bitfield_byte_object[i] and avaiable_bitfields[i] == "0":
+            print(f"peer doesnt have piece {i}")
+        else:
+            print(f"peer have piece {i}")
 
 # will arrange us a dict where each key is an index, which value is a list of peers we can ask for a piece. returns an error if not all pieces are covered. 
 # we will sort the dict from high to low 
@@ -66,8 +86,7 @@ async def _get_piece(peer_address, message):
             data = await reader.read(68)
             data = parse_valid_handhshake(data)
             if data:
-                writer.close()
-                return data, peer_address
+                return writer, reader
 
         except asyncio.TimeoutError:
             # no problem. we will try again and again. When a peer is available we exit the loop anyways
@@ -88,8 +107,7 @@ async def get_piece(torrent: Torrent, piece_index, peers_list, settings: Setting
     for task in asyncio.as_completed(tasks_for_piece):
         returned_value = await task
         if returned_value:
-            print(returned_value)
-            peer_addr = returned_value[1]
-            print("got piece, now we need to send for everyone else a cancel, i.e drop the loop and send again")
-            await ask_bitfield(torrent, peer_addr)
-            exit(-1) 
+            writer, reader = returned_value
+            await ask_bitfield(torrent, writer, reader)
+            writer.close()
+            exit()
