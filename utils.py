@@ -49,7 +49,7 @@ class setting_types:
 def encode_params_with_url(params_dict, url):
     params = urllib.parse.urlencode(params_dict)
     params = params.replace("%25", "%")
-    return url + "?" + params
+    return f"{url}?{params}"
 
 
 def fetch_versions():

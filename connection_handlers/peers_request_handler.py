@@ -9,14 +9,12 @@ import asyncio
 from utils import msg_types
 
 async def ask_bitfield(torrent: Torrent, peer_address):
-    reader, writer = await asyncio.open_connection(*peer_address)
+    # reader, writer = await asyncio.open_connection(*peer_address)
 
-    pieces_len = len(torrent.pieces_info.pieces_hashes)
+    pieces_amount = len(torrent.pieces_info.pieces_hashes)
 
-    msg = struct.pack()
-
-
-
+    packed_pieces_arr = struct.pack(f'> {pieces_amount}b', *(1 for _ in range(pieces_amount)))
+    print(packed_pieces_arr)
 
 
 # will arrange us a dict where each key is an index, which value is a list of peers we can ask for a piece. returns an error if not all pieces are covered. 
@@ -70,4 +68,5 @@ async def get_piece(torrent: Torrent, piece_index, peers_list, settings: Setting
         if returned_value:
             print(returned_value)
             print("got piece, now we need to send for everyone else a cancel, i.e drop the loop and send again")
+            await ask_bitfield(torrent, returned_value)
             exit(-1)

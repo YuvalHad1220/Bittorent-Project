@@ -19,7 +19,6 @@ if __name__ == "__main__":
     # assert udp_torrent.connection_info.tracker_type == "UDP"
     # res = asyncio.run(announce_udp_legacy(udp_torrent, announce_types.start, settings))
 
-
     tcp_torrent = torrent_handler.get_torrents()[1]
     assert tcp_torrent.connection_info.tracker_type == "TCP"
 
