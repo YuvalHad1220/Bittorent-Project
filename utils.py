@@ -21,15 +21,15 @@ class torrent_types:
     tcp = "TCP"
 
 class msg_types:
-    msg_choke = 0
-    msg_unchoke = 1
-    msg_interested = 2
-    msg_not_interested = 3
-    msg_have = 4
-    msg_bitfield = 5
-    msg_request = 6
-    msg_piece = 7
-    msg_cancel = 8
+    choke = 0
+    unchoke = 1
+    interested = 2
+    notinterested = 3
+    have = 4
+    bitfield = 5
+    request = 6
+    piece = 7
+    cancel = 8
 
     
 class announce_types:
@@ -38,7 +38,7 @@ class announce_types:
     resume = "RESUME"
     stop = "STOP"
 
-class setting_types:
+class settingtypes:
     si = "SI"
     iec = "IEC"
 
