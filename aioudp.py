@@ -64,9 +64,7 @@ class DatagramEndpointProtocol(asyncio.DatagramProtocol):
         self._endpoint._write_ready_future.set_result(None)
         self._endpoint._write_ready_future = None
 
-
-# Enpoint classes
-
+ 
 class Endpoint:
     """High-level interface for UDP enpoints.
     Can either be local or remote.

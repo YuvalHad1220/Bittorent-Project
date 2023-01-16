@@ -5,8 +5,8 @@ import aiohttp
 import asyncio
 from settings.settings import Settings
 import struct
-import urllib.parse
-import requests
+from utils import encode_params_with_url
+import urllib
 from bencoding import decode
 import socket
 PROT_ID = 0x41727101980
@@ -61,7 +61,7 @@ ANNOUNCE_TABLE_UDP = {
 }
 
 async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings):
-    HEADERS = {
+    headers = {
         "Accept-Encoding": "gzip",
         "User-Agent": settings.peer_id,
         "Content-Type": "application/x-www-form-urlencoded"
@@ -70,7 +70,7 @@ async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings)
     # asyncio does not support passing both bytes and int, so decoding bytes
     #         "info_hash": base64.b64encode(torrent.info_hash).decode("ascii"),
 
-    PARAMS = {
+    params = {
         "info_hash": torrent.info_hash,
         "peer_id": settings.user_agent + settings.random_id,
         "port": settings.port,
@@ -85,17 +85,14 @@ async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings)
 
 
     if ANNOUNCE_TABLE_HTTP[event]:
-        PARAMS["event"] = ANNOUNCE_TABLE_HTTP[event]
+        params["event"] = ANNOUNCE_TABLE_HTTP[event]
 
-    # aiohttp_params = aiohttp.formdata.FormData()
-    # for key, val in PARAMS.items():
-    #     aiohttp_params.add_field(key, val)
+    url = encode_params_with_url(params, torrent.connection_info.announce_url)    
 
-    # async with aiohttp.ClientSession() as aiohttp_client:
-    #     async with aiohttp_client.get(url= torrent.connection_info.announce_url, headers = HEADERS, data = PARAMS) as resp:
-    #         content = await resp.read()
+    async with aiohttp.ClientSession() as aiohttp_client:
+        async with aiohttp_client.get(url= url, headers = headers) as resp:
+            content = await resp.read()
 
-    content = requests.get(url= torrent.connection_info.announce_url, headers = HEADERS, params = PARAMS).content
     content = decode(content)[0]
     interval = content[b"interval"]
 
