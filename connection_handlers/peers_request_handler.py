@@ -59,15 +59,10 @@ async def get_piece(torrent: Torrent, piece_index, peers_list, settings: Setting
     # we want to run tasks of every peer until we get a response. when we get a response we will close the loop and return value
     # when _get_piece is returned, cancel all other tasks and then we can return
     # in the future we need to make the system smarter, i.e we cant rely on just ONE peer to get all bitfields.
-
-
-
-
     peer_id = settings.user_agent + settings.random_id
     peer_id = peer_id.encode()
-    reserved = b'\x00\x00\x00\x00\x00\x00\x00\x00' # reserved bytes
 
-    packed = struct.pack(">b 19s 8s 20s 20s", 19, b"BitTorrent protocol", reserved, torrent.info_hash, peer_id)
+    packed = struct.pack(">b 19s q 20s 20s", 19, b"BitTorrent protocol", 0, torrent.info_hash, peer_id)
 
     tasks_for_piece = [_get_piece(peer, packed) for peer in peers_list] #
     for task in asyncio.as_completed(tasks_for_piece):
@@ -76,24 +71,3 @@ async def get_piece(torrent: Torrent, piece_index, peers_list, settings: Setting
             print(returned_value)
             print("got piece, now we need to send for everyone else a cancel, i.e drop the loop and send again")
             exit(-1)
-
-
-
-    # for peer in peers_list:
-    #     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #     try:
-    #         client_socket.connect(peer)
-    #         client_socket.send(packed)
-    #         resp = client_socket.recv(68)
-
-    #         cntr = 0
-    #         while resp == b'' and cntr < 20:
-    #             print("got empty")
-    #             resp = client_socket.recv(68)
-    #             cntr += 1
-    #             time.sleep(1)
-    #         print(resp)
-
-    #     except:
-    #         print("failed peer:", peer)
-    #         continue
