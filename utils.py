@@ -46,6 +46,10 @@ class settingtypes:
     iec = "IEC"
 
 
+def print_bytes_as_bits(bytes_arr):
+        print(''.join(['{:08b}'.format(b) for b in bytes_arr]))
+
+
 # since aiohttp doesnt support sending sha-1 hashes, we encode it properly ourselves 
 # we return the params and the headers as just headers
 def encode_params_with_url(params_dict, url):

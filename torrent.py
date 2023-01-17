@@ -52,7 +52,7 @@ class Torrent:
     pieces_info: Pieces
     connection_info: TorrentConnectionInfo
     files: List[File]
-    peers: List[Peer] = field(default_factory=list)
+    # peers: List[Peer] = field(default_factory=list)
     downloaded: int = 0
     uploaded: int = 0
     index: int = 0
