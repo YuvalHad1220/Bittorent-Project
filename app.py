@@ -22,7 +22,7 @@ if __name__ == "__main__":
     peer_list = asyncio.run(announce_http_legacy(torrent, announce_types.start, settings))[3]
 
     peer_handler = requestHandler(settings, torrent, peer_list)
-    asyncio.run(peer_handler.init_handshaken_peers())
+    asyncio.run(peer_handler.start_main())
 
     exit(1)
 
