@@ -21,49 +21,68 @@ def pack_handshake_message(torrent, settings):
     return struct.pack(">b 19s q 20s 20s", 19, b"BitTorrent protocol", 0, torrent.info_hash, peer_id)
 
 async def _try_to_handshake(peer_address, message):
-    reader, writer = await asyncio.open_connection(*peer_address)
-    writer.write(message)
-    await writer.drain()
     try:
-        data = await reader.read(68)
+        reader, writer = await asyncio.open_connection(*peer_address)
+        writer.write(message)
+        await writer.drain()
+        data = await reader.read(len(message)) # should be the same strcture
         data = unpack_handshake_message(data)
         if data:
+            print("got connection with", peer_address)
             return writer, reader
         else:
             return None
+
+
     except asyncio.TimeoutError:
         return None
 
+    except OSError:
+        return None
+
+async def try_to_download_from(result, torrent):
+    writer, reader = result
+    await ask_for_bitfield(torrent, writer, reader)
+
+    
 # get a peer list, a torrent; try to connect to one peer
 async def connect_to_single_peer(torrent: Torrent, peers_list, settings: Settings):
     packed = pack_handshake_message(torrent, settings)
     possible_handshakes_connections = [_try_to_handshake(peer, packed) for peer in peers_list] #
+    results = await asyncio.gather(*possible_handshakes_connections)
 
-    # as soon as we're connected to a peer, break out and cancel all other tasks
-    for task in asyncio.as_completed(possible_handshakes_connections):
-        returned_value = await task
-        if returned_value:
-            break
+    results = [result for result in results if result]
 
+    download_tries = [try_to_download_from(result, torrent) for result in results]
 
-    writer, reader = returned_value
-    await ask_for_bitfield(torrent, writer, reader)
-    writer.close()
+    await asyncio.gather(*download_tries)
+
 
 async def parse_and_read_message(reader, expected_type):
     # 4 first bytes are length
     # 5th byte is type
-    res = await reader.read(4)
+    while True:
+        res = await reader.read(4)
+        if len(res) < 4:
+            continue
+        break
+
+
     msg_len = struct.unpack(">I", res)[0] # unpack the message length
-    data = await reader.read(msg_len) # receive the rest of the message
+    while True: 
+        data = await reader.read(msg_len - 4) # receive the rest of the message without first 4 bytes
+        if len(data) < 4:
+            continue
+
+        break
+
     msg_id = data[0] 
 
     if msg_id == expected_type:
         return data[1:]
-
     else:
-        print("not expected type")
-        exit()
+        print(msg_id, expected_type)
+        return b""
 
 # in the future that function will be a part of Torrent post init. it will contain all pieces hashes and the missing pieces as 0s in bitfield
 def gen_bitfield(torrent: Torrent):
@@ -111,35 +130,30 @@ def pack_piece_request_struct(torrent: Torrent, piece_index):
 
     return struct.pack('> i b i i i', msg_length, msg_types.request, piece_index, begin, length)
 
-
-async def piece_communication(writer, reader, torrent, piece_index):
-    piece_request_payload = pack_piece_request_struct(torrent, piece_index)
-    print("now we are communicating to get piece", piece_index)
-
-    writer.write(piece_request_payload)
-    await writer.drain()
-
-    print("requested all piece", piece_index)
-    while True:
-        data = await reader.read(5)
-        if data == b"":
-            print("null data")
-            await asyncio.sleep(0.01)
-            continue
-
-        data_len = data[0:4]
-        msg_id = data[4]
-        print("got response of type", msg_id)
-        break
 async def send_unchoke(writer):
     unchoke_struct = struct.pack('> i b', 5, msg_types.unchoke)
-    writer.write(unchoke_struct)
-    await writer.drain()
+    try:
+        writer.write(unchoke_struct)
+        await writer.drain()
 
+    except ConnectionResetError:
+        return None
+
+        
 async def send_interested(writer):
     interseted_struct = struct.pack('> i b', 5, msg_types.interested)
-    writer.write(interseted_struct)
+    try:
+        writer.write(interseted_struct)
+        await writer.drain()
+    except ConnectionResetError:
+        return None
+
+async def request_piece(writer, torrent, piece_index):
+    piece_request_payload = pack_piece_request_struct(torrent, piece_index)
+    writer.write(piece_request_payload)
     await writer.drain()
+    print("requested piece", piece_index)
+ 
 
 # if successful download - return buffer, else return 0
 async def try_to_download_piece(writer, reader, torrent, piece_index):
@@ -147,52 +161,70 @@ async def try_to_download_piece(writer, reader, torrent, piece_index):
     # we also need to make sure to send "unchoke" ourselves everytime peer sends "interested"
 
     await send_interested(writer)
-    print("sent interested to peer now waiting for msg")
+    print("peer knows we are interested")
 
-    while True:
-        data = await reader.read(5)
-        if data == b"":
-            await asyncio.sleep(0.01)
-            continue
+    try:
+        while True:
+            while True:
+                data = await reader.read(4)
+                if len(data) < 4:
+                    await asyncio.sleep(0.1)
+                    continue
+                break
 
-        data_len = data[0:4]
-        msg_id = data[4]
-        print("msg recieved and its id is", msg_id)
+            data_len = struct.unpack('> I', data)[0]
+            while True:
+                data = await reader.read(data_len - 4) # we already read 5 bytes so we need ro sub it from data len
+                if len(data) < 4:
+                    await asyncio.sleep(0.1)
+                    continue
+                break
 
-        if msg_id == msg_types.interested:
-            await send_unchoke(writer)
+            msg_id = data[0]
+            new_data_to_be_used = data[1:]
 
-        if msg_id == msg_types.unchoke:
-            # send a payload with details about the piece we want
-            await piece_communication(writer, reader, torrent, piece_index)
+            print(msg_id, new_data_to_be_used)
 
-        break
+            if msg_id == msg_types.interested:
+                print("got interested, sent unchoke")
+                await send_unchoke(writer)
 
+            elif msg_id == msg_types.unchoke:
+                # send a payload with details about the piece we want
+                print("got unchoke, sent interested")
+                await request_piece(writer, torrent, piece_index)
 
-    pass
+            elif msg_id == msg_types.piece:
+                print("GOT PIECE")
+                exit(-1)
 
+            elif msg_id == msg_types.have:
+                print("got have message")
+                continue
 
+            elif msg_id == msg_types.choke:
+                print("got choke")
+                await asyncio.sleep(1)
 
+            else:
+                print("got unrecognzied id:", msg_id)
+
+    except ConnectionResetError:
+        print("CONNECTION ERROR")
+        await asyncio.sleep(10)
 
 async def ask_for_bitfield(torrent: Torrent, writer, reader):
     needed_pieces = gen_bitfield(torrent)
-    bitfield_struct = pack_bitfield_struct (needed_pieces)
+    bitfield_struct = pack_bitfield_struct(needed_pieces)
     writer.write(bitfield_struct)
     await writer.drain()
+
     avaiable_bitfields = await parse_and_read_message(reader, msg_types.bitfield)
-    
-    print("got bitfield as response")
-
     for piece_index in range(len(torrent.pieces_info.pieces_hashes)):
-        if not is_available_piece(avaiable_bitfields, piece_index):
-            print("not available")
-
-        else:
-            print("now trying to request for piece index", piece_index)
+        if is_available_piece(avaiable_bitfields, piece_index):
             await try_to_download_piece(writer, reader,torrent, piece_index)
+            break
 
-
-    exit()
 # will arrange us a dict where each key is an index, which value is a list of peers we can ask for a piece. returns an error if not all pieces are covered. 
 # we will sort the dict from high to low 
 def map_bitfields():
