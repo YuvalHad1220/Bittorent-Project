@@ -87,7 +87,6 @@ def pack_bitfield_struct(bitfield):
     total_msg_len = 4 + 1 + len(bitfield) 
     return struct.pack(f'> i b {len(bitfield)}s', total_msg_len, msg_id, bitfield)
 
-
 def is_available_piece(bitfield, piece_index):
     byte_index = piece_index // 8
     bit_in_byte_index = piece_index % 8
@@ -97,20 +96,100 @@ def is_available_piece(bitfield, piece_index):
 
     return byte_to_look_at & mask
 
+def pack_piece_request_struct(torrent: Torrent, piece_index):
+    begin = 0
+    length = torrent.pieces_info.piece_size
+    msg_length = 17
+
+    # length msg = 17 bytes total.
+    # id msg (1) one byte
+    # piece index = 4 bytes
+    # piece begin = 4 bytes
+    # length = 4 bytes
+
+    # currently piece begin is 0 and length is whole piece size, so each request is for one piece
+
+    return struct.pack('> i b i i i', msg_length, msg_types.request, piece_index, begin, length)
+
+
+async def piece_communication(writer, reader, torrent, piece_index):
+    piece_request_payload = pack_piece_request_struct(torrent, piece_index)
+    print("now we are communicating to get piece", piece_index)
+
+    writer.write(piece_request_payload)
+    await writer.drain()
+
+    print("requested all piece", piece_index)
+    while True:
+        data = await reader.read(5)
+        if data == b"":
+            print("null data")
+            await asyncio.sleep(0.01)
+            continue
+
+        data_len = data[0:4]
+        msg_id = data[4]
+        print("got response of type", msg_id)
+        break
+async def send_unchoke(writer):
+    unchoke_struct = struct.pack('> i b', 5, msg_types.unchoke)
+    writer.write(unchoke_struct)
+    await writer.drain()
+
+async def send_interested(writer):
+    interseted_struct = struct.pack('> i b', 5, msg_types.interested)
+    writer.write(interseted_struct)
+    await writer.drain()
+
+# if successful download - return buffer, else return 0
+async def try_to_download_piece(writer, reader, torrent, piece_index):
+    # we will send an interested message, and once we get "unchoke" we will asks for pieces.
+    # we also need to make sure to send "unchoke" ourselves everytime peer sends "interested"
+
+    await send_interested(writer)
+    print("sent interested to peer now waiting for msg")
+
+    while True:
+        data = await reader.read(5)
+        if data == b"":
+            await asyncio.sleep(0.01)
+            continue
+
+        data_len = data[0:4]
+        msg_id = data[4]
+        print("msg recieved and its id is", msg_id)
+
+        if msg_id == msg_types.interested:
+            await send_unchoke(writer)
+
+        if msg_id == msg_types.unchoke:
+            # send a payload with details about the piece we want
+            await piece_communication(writer, reader, torrent, piece_index)
+
+        break
+
+
+    pass
+
+
+
 
 async def ask_for_bitfield(torrent: Torrent, writer, reader):
     needed_pieces = gen_bitfield(torrent)
     bitfield_struct = pack_bitfield_struct (needed_pieces)
     writer.write(bitfield_struct)
     await writer.drain()
-
     avaiable_bitfields = await parse_and_read_message(reader, msg_types.bitfield)
+    
+    print("got bitfield as response")
+
     for piece_index in range(len(torrent.pieces_info.pieces_hashes)):
         if not is_available_piece(avaiable_bitfields, piece_index):
             print("not available")
 
         else:
-            await try_to_download_piece(writer, reader, )
+            print("now trying to request for piece index", piece_index)
+            await try_to_download_piece(writer, reader,torrent, piece_index)
 
 
     exit()
