@@ -4,8 +4,9 @@ from app_operations import *
 from database.torrent_handler import TorrentHandler
 from utils import get_client_list, announce_types
 import asyncio
-from connection_handlers.peers_request_handler import requestHandler
 from connection_handlers.trakcer_request_handler import announce_http_legacy, announce_udp_legacy
+from connection_handlers.new_PeerHandler import make_handshake, ConnectedPeer
+import threading
 SUCCESS = {"success": True}
 FAILURE = {"success": False}
 
@@ -21,8 +22,13 @@ if __name__ == "__main__":
     torrent = torrent_handler.get_torrents()[1]
     peer_list = asyncio.run(announce_http_legacy(torrent, announce_types.start, settings))[3]
 
-    peer_handler = requestHandler(settings, torrent, peer_list)
-    asyncio.run(peer_handler.start_main())
+    connectables = [make_handshake(torrent, settings, peer) for peer in peer_list]
+
+    connectables = [connectable for connectable in connectables if connectable][:50]
+
+    connectables = [ConnectedPeer(torrent, settings, sock) for sock in connectables]
+
+    [threading.Thread(target=connected_peer.run).start() for connected_peer in connectables]
 
     exit(1)
 

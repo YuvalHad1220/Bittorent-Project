@@ -88,7 +88,7 @@ async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings)
         params["event"] = ANNOUNCE_TABLE_HTTP[event]
 
     url = encode_params_with_url(params, torrent.connection_info.announce_url)    
-
+    print(url)
     async with aiohttp.ClientSession() as aiohttp_client:
         async with aiohttp_client.get(url= url, headers = headers) as resp:
             content = await resp.read()
