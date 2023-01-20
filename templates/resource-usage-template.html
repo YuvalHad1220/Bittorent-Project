@@ -1,0 +1,67 @@
+<div class="card">
+    <header class="card-header">
+      <p class="card-header-title">
+        Resource Usage
+      </p>
+    </header>
+    <div class="card-content">
+      <div class="content">
+        <h4>Threads</h4>
+        <div class="columns">
+          <div class="column">
+            <div class="field">
+              <label class="label">IO Thread (Database & Disk)</label>
+              <progress class="progress" id="ioThread" value="20" max="100" title="20"></progress>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field">
+              <label class="label">Announcements Thread</label>
+              <progress class="progress" id="announcementsThread" value="12" max="100" title="13"></progress>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field">
+              <label class="label">App Thread</label>
+              <progress class="progress" id="appThread" value="3" max="100" title="3"></progress>
+            </div>
+          </div>
+        </div>
+        <div class="columns">
+          <div class="column">
+            <div class="field">
+              <label class="label">Peer Connections 1</label>
+              <progress class="progress" id="peerConnections1" value="0" max="100" title="0"></progress>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field">
+              <label class="label">Peer Connections 2</label>            
+              <progress class="progress" id="peerConnections2" value="0" max="100" title="0"></progress>
+              </div>
+            </div>
+            <div class="column">
+              <div class="field">
+                <label class="label">Peer Connections 3</label>
+                <progress class="progress" id="peerConnections3" value="0" max="100" title="0"></progress>
+              </div>
+            </div>
+            <div class="column">
+              <div class="field">
+                <label class="label">Peer Connections 4</label>
+                <progress class="progress" id="peerConnections4" value="0" max="100" title="0"></progress>
+              </div>
+            </div>
+          </div>
+          <hr>
+          <h4>Memory Usage</h4>
+          <div class="field">
+            <label class="label">RAM</label>
+            <progress class="progress" id="ramUsage" value="0" max="100" title="0"></progress>
+          </div>
+        </div>
+      </div>
+      <footer class="card-footer">
+        <a href="#" class="card-footer-item" onclick="refreshUsage()">Refresh</a>
+      </footer>
+    </div>

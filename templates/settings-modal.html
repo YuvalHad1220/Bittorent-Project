@@ -69,7 +69,29 @@
               <button class="button is-link" type="button" onclick="generateRandomId()">Generate Random ID</button>
             </div>
           </div>
-
+          <div class="field">
+            <label class="label">Block Size per Piece</label>
+            <div class="select">
+              <select id="block_size_per_piece">
+                <option value="64">64 KB</option>
+                <option value="128" selected>128 KB</option>
+                <option value="256">256 KB</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">Concurrent Connections per Torrent</label>
+            <div class="control">
+              <input class="input" id="concurrent_connections_per_torrent" type="text" value="40" required>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label">Global Connections</label>
+            <div class="control">
+              <input class="input" id="global_connections" type="text" value="800" required>
+            </div>
+          </div>
+          
         </form>
 
 

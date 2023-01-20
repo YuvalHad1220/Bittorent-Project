@@ -73,7 +73,7 @@ def fetch_versions():
 
 def as_peer_id_user_agent(match):
     x, y, z = match.split("-")[1].split(".")
-    peer_id = "-qB" + x + y + z + "-"
+    peer_id = "-qB" + x + y + z + "0-"
     user_agent = "qBittorrent/" + x + "." + y + "." + z
 
     return peer_id, user_agent
@@ -89,6 +89,9 @@ sizes = {
     "MiB": 1024**2 * 8,
     "GiB": 1024**3 * 8,
     "TiB": 1024**4 * 8,
+    "KB": 1000,
+    "MB": 1000**2,
+    "GB": 1000**3
 }
 
 def rand_str(length):

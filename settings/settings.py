@@ -1,7 +1,6 @@
 from dataclasses import dataclass, asdict
 from json import dumps, loads
-from utils import load_file, write_to_file, get_home_directory, get_cwd_directory, rand_str
-
+from utils import load_file, write_to_file, get_home_directory, get_cwd_directory, rand_str, sizes
 @dataclass
 class Settings:
     path: str
@@ -13,6 +12,8 @@ class Settings:
     port: int = 25565
     size_calc: str = "SI"
     max_torrentx_file_size: int = 15000000
+    concurrent_connections_per_torrent: int = 40
+    block_size_per_piece = 128 * sizes["KB"]
 
     def asdict(self):
         self_dict = asdict(self)

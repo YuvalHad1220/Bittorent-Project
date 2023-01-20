@@ -7,30 +7,36 @@ import asyncio
 from connection_handlers.trakcer_request_handler import announce_http_legacy, announce_udp_legacy
 from connection_handlers.new_PeerHandler import make_handshake, ConnectedPeer
 import threading
+
 SUCCESS = {"success": True}
 FAILURE = {"success": False}
-
 torrent_handler = TorrentHandler("./database/torrent.db")
 settings = read_settings_file("./settings/settings.json")
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "df0331cefc6c2b9a5d0208a726a5d1c0fd37324feba25506"
 
-if __name__ == "__main__":
-    # torrent = torrent_handler.get_torrents()[0]
-    # peer_list = asyncio.run(announce_udp_legacy(torrent, announce_types.start, settings))[3]
+# if __name__ == "__main__":
+#     # torrent = torrent_handler.get_torrents()[0]
+#     # peer_list = asyncio.run(announce_udp_legacy(torrent, announce_types.start, settings))[3]
 
-    torrent = torrent_handler.get_torrents()[1]
-    peer_list = asyncio.run(announce_http_legacy(torrent, announce_types.start, settings))[3]
+#     torrent = torrent_handler.get_torrents()[1]
+#     peer_list = asyncio.run(announce_http_legacy(torrent, announce_types.start, settings))[3]
 
-    connectables = [make_handshake(torrent, settings, peer) for peer in peer_list]
+#     connectables = [make_handshake(torrent, settings, peer) for peer in peer_list]
 
-    connectables = [connectable for connectable in connectables if connectable][:50]
+#     connectables = [connectable for connectable in connectables if connectable][:50]
 
-    connectables = [ConnectedPeer(torrent, settings, sock) for sock in connectables]
+#     connectables = [ConnectedPeer(torrent, settings, sock) for sock in connectables]
 
-    [threading.Thread(target=connected_peer.run).start() for connected_peer in connectables]
+#     [threading.Thread(target=connected_peer.run).start() for connected_peer in connectables]
 
-    exit(1)
+#     exit(1)
+
+@app.route("/stats", methods= ["GET"])
+def resource_usage():
+    return render_template("resource-usage-page.html")
+
+
 
 @app.route("/edit_settings", methods = ["GET", "POST"])
 def edit_settings():

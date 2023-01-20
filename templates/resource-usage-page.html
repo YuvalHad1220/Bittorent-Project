@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8">
+    <title>Resources Usage</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+
+</head>
+<body>
+    <script>
+    window.onload = function() {
+  refreshUsage();
+};
+
+function refreshUsage() {
+  fetch("http://127.0.0.1:12345/get_stats")
+    .then(function(response) {
+      return response.json();
+    })
+    .then(function(data) {
+      document.getElementById("ioThread").value = data.ioThread;
+      document.getElementById("announcementsThread").value = data.announcementsThread;
+      document.getElementById("appThread").value = data.appThread;
+      document.getElementById("peerConnections1").value = data.peerConnections1;
+      document.getElementById("peerConnections2").value = data.peerConnections2;
+      document.getElementById("peerConnections3").value = data.peerConnections3;
+      document.getElementById("peerConnections4").value = data.peerConnections4;
+      document.getElementById("ramUsage").value = data.ramUsage;
+    })
+    .catch(function(error) {
+      console.log("Error: " + error);
+    });
+}
+    </script>
+    {% include 'main-navbar.html' %}
+    {% include 'resource-usage-template.html' %}
+</body>
+</html>
