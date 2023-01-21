@@ -4,7 +4,6 @@ from torrent import Torrent
 from settings.settings import Settings
 from utils import msg_types
 import time
-import random
 
 
 class Handshake:
@@ -30,8 +29,6 @@ class Handshake:
             return None
 
         return Handshake(info_hash, peer_id)
-    
-
 
 class Bitfield:
     def __init__(self, bitfield: bytes):
@@ -58,7 +55,6 @@ class Bitfield:
 
         return Bitfield(bitfield)
 
-
 class Request:
     def __init__(self, piece_index, begin, piece_length):
         self.begin = begin
@@ -82,7 +78,6 @@ class Request:
 
 def make_handshake(torrent: Torrent, settings: Settings, peer_addr):
     handshake = Handshake(torrent.info_hash, (settings.user_agent + settings.random_id).encode())
-
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(0.1)
@@ -111,15 +106,24 @@ class ConnectedPeer:
         self.torrent = torrent
         self.settings = settings
         self.sock = sock
-
         self.peer_bitfield = None
         self.peer_choked = True
         self.choked = True
         self.interested = False
 
-    def run(self):
+    def complete_conn(self):
+        # here we will send bitfields and listen if there are any messages from peer
+        self.sock.settimeout(None)
+
+
+
+    def in_case_of_error(self):
+        self.sock.close()
+
+
+
+    def run_until_block_recieved(self, piece_index, block_offset_in_piece, block_len):
         try:
-            self.sock.settimeout(None)
             # first we will init our bitfield
 
             my_bitfield = Bitfield(bytes([0]) * len(self.torrent.pieces_info.pieces_hashes))
@@ -182,4 +186,7 @@ class ConnectedPeer:
         except Exception as e:
             print(e.__str__())
 
+
+    def run_after_download_complete(self):
+        pass
 

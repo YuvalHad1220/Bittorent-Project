@@ -274,6 +274,8 @@ async def announce_udp_legacy(torrent: Torrent, event: str, settings: Settings):
 
     if event == announce_types.finish:
         torrent.connection_info.state = torrent_types.finished
+
+        
     logging.info(f"updated torrent {torrent.name} connection info")
 
 

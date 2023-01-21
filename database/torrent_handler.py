@@ -26,7 +26,7 @@ class TorrentHandler:
         pass
 
     def get_torrents(self):
-        return self.torrent_list[:]
+        return self.torrent_list
 
     def get_torrents_by_index(self, *indexes):
         pass

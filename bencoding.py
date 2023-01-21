@@ -105,3 +105,15 @@ def decode(encoded_bytes) -> Tuple[Any, int]:
         break
 
     return value, index
+
+
+
+if __name__ == "__main__":
+    tf = "added_torrent_files\The.Last.of.Us.S01E01.HDR.2160p.WEB.H265-CAKES[Fuzer].torrent"
+
+    with open(tf, 'rb') as f:
+        data = f.read()
+
+    data = decode(data)[0]
+
+    print(data[b"info"])
