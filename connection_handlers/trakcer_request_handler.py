@@ -45,14 +45,16 @@ def split_torrent_list(torrent_list: List[Torrent]):
 async def udp_loop(udp_torrents_list, settings: Settings):
     to_announce = []
     for torrent in udp_torrents_list:
-        if torrent.connection_info.time_to_announce == 0:
-            to_announce.append(announce_udp_legacy(torrent, announce_types.resume, settings))
-
-        if torrent.connection_info.state == torrent_types.wait_to_finish:
-            to_announce.append(announce_udp_legacy(torrent, announce_types.finish, settings))
-
         if torrent.connection_info.state == torrent_types.wait_to_start:
             to_announce.append(announce_udp_legacy(torrent, announce_types.start, settings))
+
+        elif torrent.connection_info.state == torrent_types.wait_to_finish:
+            to_announce.append(announce_udp_legacy(torrent, announce_types.finish, settings))
+
+        elif torrent.connection_info.time_to_announce == 0:
+            to_announce.append(announce_udp_legacy(torrent, announce_types.resume, settings))
+
+
 
             
         torrent.connection_info.time_to_announce -= 1
@@ -61,15 +63,20 @@ async def udp_loop(udp_torrents_list, settings: Settings):
 
 async def http_loop(http_torrents_list: List[Torrent], settings: Settings):
     to_announce = []
+    # at every torrent we add, time to announce is also zero so if we dont continue it will perform same task twice; can also be the same at wait to finish and announce resume
+    # so we will follow seder kdimuyot
     for torrent in http_torrents_list:
-        if torrent.connection_info.time_to_announce == 0:
-            to_announce.append(announce_http_legacy(torrent, announce_types.resume, settings))
-
-        if torrent.connection_info.state == torrent_types.wait_to_finish:
-            to_announce.append(announce_http_legacy(torrent, announce_types.finish, settings))
-
+        print(torrent.connection_info.time_to_announce)
         if torrent.connection_info.state == torrent_types.wait_to_start:
             to_announce.append(announce_http_legacy(torrent, announce_types.start, settings))
+
+        elif torrent.connection_info.state == torrent_types.wait_to_finish:
+            to_announce.append(announce_http_legacy(torrent, announce_types.finish, settings))
+
+
+        elif torrent.connection_info.time_to_announce == 0:
+            to_announce.append(announce_http_legacy(torrent, announce_types.resume, settings))
+
 
 
         torrent.connection_info.time_to_announce -= 1
@@ -121,16 +128,23 @@ async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings)
 
     content = decode(content)[0]
     interval = content[b"interval"]
+    peer_list = []
 
     peers = content[b"peers"]
-    peer_list_str = [peers[i:i+6] for i in range(0, len(peers), 6)]
-    peer_list = []
-    for peer_data in peer_list_str:
+    if type(peers[0]) == dict:
+        for peer_dict in peers:
+            ip = peer_dict[b"ip"].split(b":")[-1].decode()
+            if len(ip.split(".")) != 4:
+                continue
+            port = peer_dict[b"port"]
+            peer_list.append((ip, port))
+    else:
+        peer_list_str = [peers[i:i+6] for i in range(0, len(peers), 6)]
+        for peer_data in peer_list_str:
+            ip, port = struct.unpack('! 4s H', peer_data)
+            ip = socket.inet_ntoa(ip)
 
-        ip, port = struct.unpack('! 4s H', peer_data)
-        ip = socket.inet_ntoa(ip)
-
-        peer_list.append((ip, port))
+            peer_list.append((ip, port))
 
     if b"incomplete" not in content:
         leechers = len(peer_list)
@@ -153,8 +167,9 @@ async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings)
 
     if event == announce_types.finish:
         torrent.connection_info.state = torrent_types.finished
-    logging.info(f"updated torrent {torrent.name} connection info")
 
+        
+    logging.info(f"updated torrent {torrent.name} connection info")
 
 def build_announce_struct(torrent: Torrent, event: str, settings: Settings, conn_id, trans_id):
 
