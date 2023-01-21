@@ -9,6 +9,7 @@ import hashlib
 class TorrentConnectionInfo:
     announce_url: str
     state: str
+    time_to_announce: int = 0
     seeders: int = 0
     connected_seeders: int = 0
     leechers: int = 0
@@ -23,10 +24,6 @@ class TorrentConnectionInfo:
             return types.udp
         return types.tcp
     
-@dataclass
-class Peer:
-    ip: str
-    index: int = 0
 
 @dataclass
 class Pieces:
@@ -52,7 +49,7 @@ class Torrent:
     pieces_info: Pieces
     connection_info: TorrentConnectionInfo
     files: List[File]
-    # peers: List[Peer] = field(default_factory=list)
+    peers: List[str] = field(default_factory=list)
     downloaded: int = 0
     uploaded: int = 0
     index: int = 0
@@ -109,5 +106,5 @@ def create_torrent(torrent_file_path, torrent_file_bytes, download_path, to_decr
     is_torrentx = b'torrentx' in decoded
     pieces_obj = Pieces(piece_size, pieces_list)
 
-    connection_info_obj = TorrentConnectionInfo(announce, types.started)
+    connection_info_obj = TorrentConnectionInfo(announce, types.wait_to_start)
     return Torrent(name, torrent_hash, torrent_file_path, download_path, to_decrypt, metadata, is_torrentx, pieces_obj, connection_info_obj, file_list)

@@ -13,6 +13,9 @@ import re
 import json
 
 class torrent_types:
+    wait_to_start = "WAITING START"
+    wait_to_finish = "WAITING FINISH"
+    finished = "FINISHED"
     started = "STARTED"
     downloading = "DOWNLOADING"
     uploading = "SEEDING"

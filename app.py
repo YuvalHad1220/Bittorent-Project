@@ -4,16 +4,23 @@ from app_operations import *
 from database.torrent_handler import TorrentHandler
 from utils import get_client_list, announce_types
 import asyncio
-from connection_handlers.trakcer_request_handler import announce_http_legacy, announce_udp_legacy
+from connection_handlers.trakcer_request_handler import main_loop
 from connection_handlers.new_PeerHandler import make_handshake, ConnectedPeer
 import threading
+from thread_handler import ThreadHandler
+
 
 SUCCESS = {"success": True}
 FAILURE = {"success": False}
+
 torrent_handler = TorrentHandler("./database/torrent.db")
 settings = read_settings_file("./settings/settings.json")
+request_handler = main_loop(torrent_handler.get_torrents(), settings, torrent_handler)
+thread_handler = ThreadHandler(threading.current_thread(), request_handler)
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "df0331cefc6c2b9a5d0208a726a5d1c0fd37324feba25506"
+thread_handler.start_threads()
+
 
 # if __name__ == "__main__":
 #     # torrent = torrent_handler.get_torrents()[0]

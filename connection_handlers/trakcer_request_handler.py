@@ -5,46 +5,12 @@ import aiohttp
 import asyncio
 from settings.settings import Settings
 import struct
-from utils import encode_params_with_url
-import urllib
+from utils import encode_params_with_url, announce_types, torrent_types
 from bencoding import decode
 import socket
+import logging
+
 PROT_ID = 0x41727101980
-
-
-def split_torrent_list(torrent_list: List[Torrent]):
-    udp_torrents = []
-    http_torrents = []
-
-    for torrent in torrent_list:
-        if "udp://" in torrent.connection_info.announce_url:
-            udp_torrents.append(torrent)
-        else:
-            http_torrents.append(torrent)
-
-    return udp_torrents, http_torrents
-
-
-async def udp_loop(udp_torrents_list):
-    pass
-
-async def http_loop(http_torrents_list):
-    pass
-
-async def main_loop(torrent_handle):
-   # that loop will keep running - as we ge
-   while True:
-    torrent_list = torrent_handle.get_torrent_list() 
-    udp_torrents , http_torrents = split_torrent_list(torrent_list)
-
-    # udp_torrents_legacy, udp_torrentx = 
-    # http_torrents_legacy, http_torrentsx = 
-    
-    udp_torrents_loop = asyncio.create_task(udp_loop(udp_torrents))
-    http_torrents_loop = asyncio.create_task(http_loop(http_torrents))
-    await asyncio.gather(udp_torrents_loop, http_torrents_loop)
-
-
 
 ANNOUNCE_TABLE_HTTP = {
     "START": "started",
@@ -59,6 +25,67 @@ ANNOUNCE_TABLE_UDP = {
     "FINISH": 1,
     "STOP": 3
 }
+
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(levelname)s %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
+
+def split_torrent_list(torrent_list: List[Torrent]):
+    udp_torrents = []
+    http_torrents = []
+
+    for torrent in torrent_list:
+        if "udp://" in torrent.connection_info.announce_url:
+            udp_torrents.append(torrent)
+        else:
+            http_torrents.append(torrent)
+
+    return udp_torrents, http_torrents
+
+async def udp_loop(udp_torrents_list, settings: Settings):
+    to_announce = []
+    for torrent in udp_torrents_list:
+        if torrent.connection_info.time_to_announce == 0:
+            to_announce.append(announce_udp_legacy(torrent, announce_types.resume, settings))
+
+        if torrent.connection_info.state == torrent_types.wait_to_finish:
+            to_announce.append(announce_udp_legacy(torrent, announce_types.finish, settings))
+
+        if torrent.connection_info.state == torrent_types.wait_to_start:
+            to_announce.append(announce_udp_legacy(torrent, announce_types.start, settings))
+
+            
+        torrent.connection_info.time_to_announce -= 1
+
+    await asyncio.gather(*to_announce)
+
+async def http_loop(http_torrents_list: List[Torrent], settings: Settings):
+    to_announce = []
+    for torrent in http_torrents_list:
+        if torrent.connection_info.time_to_announce == 0:
+            to_announce.append(announce_http_legacy(torrent, announce_types.resume, settings))
+
+        if torrent.connection_info.state == torrent_types.wait_to_finish:
+            to_announce.append(announce_http_legacy(torrent, announce_types.finish, settings))
+
+        if torrent.connection_info.state == torrent_types.wait_to_start:
+            to_announce.append(announce_http_legacy(torrent, announce_types.start, settings))
+
+
+        torrent.connection_info.time_to_announce -= 1
+
+    await asyncio.gather(*to_announce)
+
+async def main_loop(torrent_list, settings, torrent_handler):
+    logging.debug("running tracker main loop")
+    while True:
+        torrent_list = torrent_handler.get_torrents()
+        udp_torrents, http_torrnets = split_torrent_list(torrent_list)
+        logging.debug(f"UDP TORRENTS LEN: {len(udp_torrents)}, TCP_TORRENTS_LEN: {len(http_torrnets)}")
+        #torrentx_udp, torrentx_tcp, torrent_udp, torrent_tcp = 
+        await asyncio.gather(udp_loop(udp_torrents, settings), http_loop(http_torrnets, settings))
+        await asyncio.sleep(1)
+
 
 async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings):
     headers = {
@@ -88,7 +115,6 @@ async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings)
         params["event"] = ANNOUNCE_TABLE_HTTP[event]
 
     url = encode_params_with_url(params, torrent.connection_info.announce_url)    
-    print(url)
     async with aiohttp.ClientSession() as aiohttp_client:
         async with aiohttp_client.get(url= url, headers = headers) as resp:
             content = await resp.read()
@@ -116,7 +142,19 @@ async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings)
     else:
         seeders = content[b"complete"]
 
-    return interval, leechers, seeders, peer_list
+
+    torrent.peers = peer_list
+    torrent.connection_info.time_to_announce = interval
+    torrent.connection_info.leechers = leechers
+    torrent.connection_info.seeders = seeders
+
+    if event == announce_types.start:
+        torrent.connection_info.state = torrent_types.started
+
+    if event == announce_types.finish:
+        torrent.connection_info.state = torrent_types.finished
+    logging.info(f"updated torrent {torrent.name} connection info")
+
 
 def build_announce_struct(torrent: Torrent, event: str, settings: Settings, conn_id, trans_id):
 
@@ -163,8 +201,7 @@ def parse_announce_resp_struct(message):
         ip = socket.inet_ntoa(ip)
 
         peer_list.append((ip, port))
-
-
+    
     return interval, leechers, seeders, peer_list
 
 def build_conn_struct(settings: Settings):
@@ -191,6 +228,7 @@ async def init_conn(message, addr):
 
     remote_conn.send(message)
     data = await remote_conn.receive()
+
     return data, remote_conn
 
 async def announce_udp_legacy(torrent: Torrent, event: str, settings: Settings):
@@ -210,10 +248,18 @@ async def announce_udp_legacy(torrent: Torrent, event: str, settings: Settings):
 
     remote_conn.close()
     # now we need to construct our announcing data
-    return parse_announce_resp_struct(response)
+    interval, leechers, seeders, peer_list = parse_announce_resp_struct(response)
 
-    
+    torrent.peers = peer_list
+    torrent.connection_info.time_to_announce = interval
+    torrent.connection_info.leechers = leechers
+    torrent.connection_info.seeders = seeders
+    if event == announce_types.start:
+        torrent.connection_info.state = torrent_types.started
 
+    if event == announce_types.finish:
+        torrent.connection_info.state = torrent_types.finished
+    logging.info(f"updated torrent {torrent.name} connection info")
 
 
 
