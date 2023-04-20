@@ -5,7 +5,7 @@ from database.torrent_handler import TorrentHandler
 from utils import get_client_list, announce_types
 import asyncio
 from connection_handlers.trakcer_request_handler import main_loop
-from connection_handlers.new_PeerHandler import make_handshake, ConnectedPeer
+from connection_handlers.peer_handler import make_handshake, ConnectedPeer
 import threading
 from thread_handler import ThreadHandler
 

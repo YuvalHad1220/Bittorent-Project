@@ -85,19 +85,17 @@ def make_handshake(torrent: Torrent, settings: Settings, peer_addr):
     handshake = Handshake(torrent.info_hash, (settings.user_agent + settings.random_id).encode())
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(0.1)
+    sock.settimeout(0.8)
     try:
         sock.connect(peer_addr)
         sock.send(handshake.to_bytes())
         data = sock.recv(68)
 
     except (TimeoutError, ConnectionResetError):
-        print("unconnectable")
         sock.close()
         return None
 
     if not Handshake.from_bytes(data):
-        print("unconnectable")
         sock.close()
         return None
 
@@ -107,29 +105,23 @@ def make_handshake(torrent: Torrent, settings: Settings, peer_addr):
 
 
 class ConnectedPeer:
-    def __init__(self, torrent: Torrent, settings: Settings, sock: socket.socket, download_handler):
-        self.torrent = torrent
-        self.settings = settings
+    def __init__(self, sock: socket.socket, download_handler):
+        self.torrent = download_handler.torrent
+        self.settings = download_handler.settings
         self.sock = sock
         self.peer_bitfield = None
         self.peer_choked = True
         self.choked = True
         self.interested = False
         self.download_handler = download_handler
-        self.current_request_bytes = []
-
-    def set_request_message(self, msg_in_bytes):
-        # that function sends either a request \ cancel message based on need
-        self.current_request_bytes.append(msg_in_bytes)
-
-    def parse_request_answer(self, payload):
-        self.download_handler.get_block_in_piece(payload)
+        self.to_send = []
 
     def run(self):
         self.sock.settimeout(None)
         while True:
-            if self.current_request_bytes:
-                self.sock.send(self.current_request_bytes.pop())
+            if self.to_send:
+                self.sock.send(self.to_send.pop())
+
 
             msg_len = self.sock.recv(4)
             msg_len = int.from_bytes(msg_len)
@@ -141,39 +133,32 @@ class ConnectedPeer:
                 continue
 
             msg_id = payload[0]
-            print("got from peer msg:", msg_id)
 
             match msg_id:
                 case msg_types.bitfield:
-                    print("got bitfield from peer")
                     self.peer_bitfield = Bitfield.from_bytes(payload)
 
                 case msg_types.unchoke:
-                    print("got unchoke from peer")
                     self.choked = False
                     self.peer_choked = False
 
                 case msg_types.request:
-                    print("got request from peer")
                     req = Request.from_bytes(payload)
 
                 case msg_types.piece:
-                    self.parse_request_answer(payload)
+                    self.download_handler.on_block(payload)
 
                 case msg_types.choke:
-                    print("peer choked us")
                     self.peer_choked = True
 
             if not self.interested:
                 interested = struct.pack('> i b', 1, msg_types.interested)
                 self.sock.send(interested)
                 self.interested = True
-                print("sent interested to peer")
 
             if self.choked:
                 unchoke = struct.pack('> i b', 1, msg_types.unchoke)
                 self.sock.send(unchoke)
                 self.choked = False
-                print("sent to peer that he is unchoked to me")
 
             time.sleep(1)

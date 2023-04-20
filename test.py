@@ -1,6 +1,6 @@
 import struct
 
-from connection_handlers.new_PeerHandler import ConnectedPeer, make_handshake, Request
+from connection_handlers.peer_handler import ConnectedPeer, make_handshake, Request
 from connection_handlers import trakcer_request_handler
 
 from database.torrent_handler import TorrentHandler
@@ -8,81 +8,68 @@ from settings.settings import read_settings_file
 import asyncio
 import threading
 
-BLOCK_LENGTH = 0x10000
+BLOCK_SIZE = 0x1000
 
 
 class downloadHandler:
-    def __init__(self, torrent, settings) -> None:
+    def __init__(self, torrent, settings):
         self.torrent = torrent
         self.settings = settings
         self.connections = []
 
         self.piece_list_length = len(self.torrent.pieces_info.pieces_hashes_list)
+        self.piece_size = self.torrent.pieces_info.piece_size_in_bytes
         self.current_piece_index = 0
-        self.current_block_index = 0
         self.current_piece_data = bytearray([0]) * self.torrent.pieces_info.piece_size_in_bytes
+        self.block_offset = 0
+        self.req = None
 
     def gatherConnectables(self):
         connectables = [make_handshake(torrent1, settings, peer) for peer in torrent1.peers]
-        connectables = [x for x in connectables if x is not None]
-        self.connections = [ConnectedPeer(self.torrent, self.settings, x, self) for x in connectables]
+        connectables = [connectable for connectable in connectables if connectable is not None]
+        self.connections = [ConnectedPeer(x, self) for x in connectables]
 
     def startConnectables(self):
-        # start the socket with peer
         for connectable in self.connections:
             threading.Thread(target=connectable.run).start()
-        print("started connection thread")
+        print("connected to each peer that we had a handshake with")
 
     def request_block(self):
-        request = Request(self.current_piece_index, self.current_block_index, BLOCK_LENGTH)
+        self.req = Request(self.current_piece_index, self.block_offset, BLOCK_SIZE)
         for connection in self.connections:
-            connection.set_request_message(request.to_bytes())
+            connection.to_send.append(self.req.to_bytes())
 
-    def cancel_block(self):
-        request = Request(self.current_piece_index, self.current_block_index, BLOCK_LENGTH)
-        for connection in self.connections:
-            connection.set_request_message(request.cancel_to_bytes())
-
-    def get_block_in_piece(self, payload):
-        # will put the data from a block in piece
-        self.cancel_block()
-
+    def on_block(self, payload):
         block = payload[9:]
 
-        # self.save_block_to_piece(block)
-        self.get_next_block()
+        self.save_block_to_piece(block)
+        self.get_next_block(block)
 
     def validate_piece(self):
         pass
 
     def save_block_to_piece(self, block):
+        for i in range(len(block)):
+            self.current_piece_data[self.block_offset + i] = block[i]
 
-        for i in range(min(len(block), self.torrent.pieces_info.piece_size_in_bytes)):
-            self.current_piece_data[self.current_block_index + i] = block[i]
-
-        print("saved block to piece.")
-
-    def get_next_block(self):
-        print("piece size: ", self.torrent.pieces_info.piece_size_in_bytes)
-        print("current block offset: ", self.current_block_index)
-        # we dont have the risk of asking for a block longer then piece size because it will just be padded with 0
-        if self.current_block_index >= self.torrent.pieces_info.piece_size_in_bytes:
-            self.current_piece_index += 1
-            self.current_block_index = 0
-        else:
-            self.current_block_index += BLOCK_LENGTH
-
+    def get_next_block(self, block):
         if self.current_piece_index > self.piece_list_length:
-            print("download finished")
+            print("finished downloading!!!!")
+            exit(-1)
+        if len(block) + self.block_offset >= self.piece_size:
+            self.block_offset = 0
+            self.current_piece_index += 1
         else:
-            print(f"getting {self.current_piece_index} from {self.piece_list_length}")
-            self.request_block()
+            self.block_offset += len(block)
+
+        print("proceeded to ask for next block")
+        self.request_block()
 
 
 torrent_handler = TorrentHandler("./database/torrent.db")
 settings = read_settings_file("./settings/settings.json")
 
-torrent1 = torrent_handler.get_torrents()[1]
+torrent1 = torrent_handler.get_torrents()[0]
 
 asyncio.run(trakcer_request_handler.main_loop(settings, torrent_handler))
 x = downloadHandler(torrent1, settings)
