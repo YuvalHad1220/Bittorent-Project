@@ -130,8 +130,8 @@ class dctodb:
         Mega function that consists of multiple child functions.
         1. We will insert our dataclasses and lists
         2. We will insert ourselves, MEANWHILE updating our indexes as fitted in the db itself.
-        
         """
+        pass
 
     def insert_one(self, instance, extra_columns: Dict[str, Any] = dict()):
         """

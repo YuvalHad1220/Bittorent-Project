@@ -12,6 +12,22 @@ import urllib
 import re
 import json
 
+class sort_types:
+    index = "INDEX"
+    name = "NAME"
+    state = "STATE"
+    type = "TYPE"
+    tracker_protocol = "TRACKER_PROTOCOL"
+    size = "SIZE"
+    progress = "PROGRESS"
+    download_speed = "DOWNLOAD_SPEED"
+    downloaded = "DOWNLOADED"
+    upload_speed = "UPLOAD_SPEED"
+    uploaded = "UPLOADED"
+    seeders = "SEEDERS"
+    leechers = "LEECHERS"
+
+    
 class torrent_types:
     wait_to_start = "WAITING START"
     wait_to_finish = "WAITING FINISH"

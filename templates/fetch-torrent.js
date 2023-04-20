@@ -110,3 +110,6 @@ function rebuild_table(){
     })
     
 }
+window.onload = function() {
+    rebuild_table();
+};

@@ -15,7 +15,7 @@ FAILURE = {"success": False}
 
 torrent_handler = TorrentHandler("./database/torrent.db")
 settings = read_settings_file("./settings/settings.json")
-request_handler = main_loop(torrent_handler.get_torrents(), settings, torrent_handler)
+request_handler = main_loop(settings, torrent_handler)
 thread_handler = ThreadHandler(threading.current_thread(), request_handler)
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "df0331cefc6c2b9a5d0208a726a5d1c0fd37324feba25506"

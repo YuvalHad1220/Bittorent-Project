@@ -1,24 +1,23 @@
 <!--https://bulma.io/documentation/elements/table/-->
 <table class="table is-fullwidth is-hoverable" id="torrentlist">
-
-    <!-- row -->
     <tr>
-        <th></th> <!-- empty cell to select in checkbox -->
-        <th>Index</th>
-        <th>Name</th>
-        <th>State</th>
-        <th>Type</th>
-        <th>Tracker Protocol</th>
-        <th>Size</th>
-        <th>Progress</th>
-        <th>Download Speed</th>
-        <th>Downloaded</th>
-        <th>Upload Speed</th>
-        <th>Uploaded</th>
-        <th>Seeders</th>
-        <th>Leechers</th>
-        <th></th>
+        <th></th> 
+        <th><a href="#" onclick="sortBy('INDEX')">Index</a></th>
+        <th><a href="#" onclick="sortBy('NAME')">Name</a></th>
+        <th><a href="#" onclick="sortBy('STATE')">State</a></th>
+        <th><a href="#" onclick="sortBy('TYPE')">Type</a></th>
+        <th><a href="#" onclick="sortBy('TRACKER_PROTOCOL')">Tracker Protocol</a></th>
+        <th><a href="#" onclick="sortBy('SIZE')">Size</a></th>
+        <th><a href="#" onclick="sortBy('PROGRESS')">Progress</a></th>
+        <th><a href="#" onclick="sortBy('DOWNLOAD_SPEED')">Download Speed</a></th>
+        <th><a href="#" onclick="sortBy('DOWNLOADED')">Downloaded</a></th>
+        <th><a href="#" onclick="sortBy('UPLOAD_SPEED')">Upload Speed</a></th>
+        <th><a href="#" onclick="sortBy('UPLOADED')">Uploaded</a></th>
+        <th><a href="#" onclick="sortBy('SEEDERS')">Seeders</a></th>
+        <th><a href="#" onclick="sortBy('LEECHERS')">Leechers</a></th>
     </tr>
+    <!-- Additional table rows and cells here -->
+</table>
 
     <script>
     {% include 'fetch-torrent.js' %}

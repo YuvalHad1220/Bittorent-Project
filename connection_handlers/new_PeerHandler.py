@@ -15,7 +15,7 @@ class Handshake:
         self.peer_id = peer_id
         self.info_hash = info_hash
 
-    def into_bytes(self):
+    def to_bytes(self):
         return struct.pack("> b 19s q 20s 20s", self.identifier_length, self.identifer, 0, self.info_hash, self.peer_id)
 
     @classmethod
@@ -30,10 +30,10 @@ class Handshake:
 
         return Handshake(info_hash, peer_id)
 
+
 class Bitfield:
     def __init__(self, bitfield: bytes):
         self.bitfield = bitfield
-
 
     def to_bytes(self):
         return struct.pack(f'> i b {len(self.bitfield)}s', 1 + len(self.bitfield), msg_types.bitfield, self.bitfield)
@@ -41,8 +41,7 @@ class Bitfield:
     def has_piece(self, piece_index):
         byte_index = piece_index / 8
         offset = piece_index % 8
-        return self.bitfield[byte_index] >> (7-offset)&1 != 0
-    
+        return self.bitfield[byte_index] >> (7 - offset) & 1 != 0
 
     @classmethod
     def from_bytes(cls, payload):
@@ -55,6 +54,7 @@ class Bitfield:
 
         return Bitfield(bitfield)
 
+
 class Request:
     def __init__(self, piece_index, begin, piece_length):
         self.begin = begin
@@ -63,8 +63,13 @@ class Request:
 
     def to_bytes(self):
         total_length = 1 + 4 + 4 + 4
-        return struct.pack('> i b i i i', total_length, msg_types.request, self.piece_index, self.begin, self.piece_length)
+        return struct.pack('> i b i i i', total_length, msg_types.request, self.piece_index, self.begin,
+                           self.piece_length)
 
+    def cancel_to_bytes(self):
+        total_length = 1 + 4 + 4 + 4
+        return struct.pack('> i b i i i', total_length, msg_types.cancel, self.piece_index, self.begin,
+                           self.piece_length)
 
     @classmethod
     def from_bytes(cls, payload):
@@ -73,8 +78,8 @@ class Request:
         if msg_type != msg_types.request:
             return None
 
-
         return Request(piece_index, piece_begin, piece_length)
+
 
 def make_handshake(torrent: Torrent, settings: Settings, peer_addr):
     handshake = Handshake(torrent.info_hash, (settings.user_agent + settings.random_id).encode())
@@ -83,7 +88,7 @@ def make_handshake(torrent: Torrent, settings: Settings, peer_addr):
     sock.settimeout(0.1)
     try:
         sock.connect(peer_addr)
-        sock.send(handshake.into_bytes())
+        sock.send(handshake.to_bytes())
         data = sock.recv(68)
 
     except (TimeoutError, ConnectionResetError):
@@ -102,7 +107,7 @@ def make_handshake(torrent: Torrent, settings: Settings, peer_addr):
 
 
 class ConnectedPeer:
-    def __init__(self, torrent: Torrent, settings: Settings, sock: socket.socket):
+    def __init__(self, torrent: Torrent, settings: Settings, sock: socket.socket, download_handler):
         self.torrent = torrent
         self.settings = settings
         self.sock = sock
@@ -110,83 +115,65 @@ class ConnectedPeer:
         self.peer_choked = True
         self.choked = True
         self.interested = False
+        self.download_handler = download_handler
+        self.current_request_bytes = []
 
-    def complete_conn(self):
-        # here we will send bitfields and listen if there are any messages from peer
+    def set_request_message(self, msg_in_bytes):
+        # that function sends either a request \ cancel message based on need
+        self.current_request_bytes.append(msg_in_bytes)
+
+    def parse_request_answer(self, payload):
+        self.download_handler.get_block_in_piece(payload)
+
+    def run(self):
         self.sock.settimeout(None)
+        while True:
+            if self.current_request_bytes:
+                self.sock.send(self.current_request_bytes.pop())
 
+            msg_len = self.sock.recv(4)
+            msg_len = int.from_bytes(msg_len)
 
+            payload = self.sock.recv(msg_len)
 
-    def in_case_of_error(self):
-        self.sock.close()
+            if payload == b"":
+                # keep-alive
+                continue
 
+            msg_id = payload[0]
+            print("got from peer msg:", msg_id)
 
+            match msg_id:
+                case msg_types.bitfield:
+                    print("got bitfield from peer")
+                    self.peer_bitfield = Bitfield.from_bytes(payload)
 
-    def run_until_block_recieved(self, piece_index, block_offset_in_piece, block_len):
-        try:
-            # first we will init our bitfield
-
-            my_bitfield = Bitfield(bytes([0]) * len(self.torrent.pieces_info.pieces_hashes))
-            # self.sock.send(my_bitfield.to_bytes())
-            # print("sent bitfield to peer")
-
-            while True:
-                msg_len = self.sock.recv(4)
-                msg_len = int.from_bytes(msg_len)
-
-                payload = self.sock.recv(msg_len)
-
-                if payload == b"":
-                    # keep-alive
-                    continue
-
-                msg_id = payload[0]
-                print("got from peer msg:", msg_id)
-
-                match msg_id:
-                    case msg_types.bitfield:
-                        print("got bitfield from peer")
-                        self.peer_bitfield = Bitfield.from_bytes(payload)
-
-                    case msg_types.unchoke:
-                        print("got unchoke from peer")
-                        self.choked = False
-                        self.peer_choked = False
-
-                    case msg_types.request:
-                        print("got request from peer")
-                        req = Request.from_bytes(payload)
-
-                    case msg_types.piece:
-                        print("got piece")
-                        exit(1)
-
-                    case msg_types.choke:
-                        print("peer choked us")
-                        self.peer_choked = True
-
-                if not self.interested:
-                    interested = struct.pack('> i b', 1, msg_types.interested)
-                    self.sock.send(interested)
-                    self.interested = True
-                    print("sent interested to peer")
-
-                if self.choked:
-                    unchoke = struct.pack('> i b', 1, msg_types.unchoke)
-                    # self.sock.send(unchoke)
+                case msg_types.unchoke:
+                    print("got unchoke from peer")
                     self.choked = False
-                    print("sent to peer that he is unchoked to me")
+                    self.peer_choked = False
 
+                case msg_types.request:
+                    print("got request from peer")
+                    req = Request.from_bytes(payload)
 
-                req = Request(140, 1, 0x0400)
-                self.sock.send(req.to_bytes())
-                print("told peer im interested in piece")
+                case msg_types.piece:
+                    self.parse_request_answer(payload)
 
-                time.sleep(5)
-        except Exception as e:
-            print(e.__str__())
+                case msg_types.choke:
+                    print("peer choked us")
+                    self.peer_choked = True
 
+            if not self.interested:
+                interested = struct.pack('> i b', 1, msg_types.interested)
+                self.sock.send(interested)
+                self.interested = True
+                print("sent interested to peer")
 
-    def run_after_download_complete(self):
-        pass
+            if self.choked:
+                unchoke = struct.pack('> i b', 1, msg_types.unchoke)
+                self.sock.send(unchoke)
+                self.choked = False
+                print("sent to peer that he is unchoked to me")
 
+            time.sleep(1)

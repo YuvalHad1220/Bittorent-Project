@@ -83,15 +83,14 @@ async def http_loop(http_torrents_list: List[Torrent], settings: Settings):
 
     await asyncio.gather(*to_announce)
 
-async def main_loop(torrent_list, settings, torrent_handler):
+async def main_loop(settings, torrent_handler):
     logging.debug("running tracker main loop")
-    while True:
-        torrent_list = torrent_handler.get_torrents()
-        udp_torrents, http_torrnets = split_torrent_list(torrent_list)
-        logging.debug(f"UDP TORRENTS LEN: {len(udp_torrents)}, TCP_TORRENTS_LEN: {len(http_torrnets)}")
-        #torrentx_udp, torrentx_tcp, torrent_udp, torrent_tcp = 
-        await asyncio.gather(udp_loop(udp_torrents, settings), http_loop(http_torrnets, settings))
-        await asyncio.sleep(1)
+    # while True:
+    torrent_list = torrent_handler.get_torrents()
+    udp_torrents, http_torrnets = split_torrent_list(torrent_list)
+    logging.debug(f"UDP TORRENTS LEN: {len(udp_torrents)}, TCP_TORRENTS_LEN: {len(http_torrnets)}")
+    await asyncio.gather(udp_loop(udp_torrents, settings), http_loop(http_torrnets, settings))
+#   await asyncio.sleep(1)
 
 
 async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings):
@@ -131,7 +130,7 @@ async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings)
     peer_list = []
 
     peers = content[b"peers"]
-    if type(peers[0]) == dict:
+    if peers and type(peers[0]) == dict:
         for peer_dict in peers:
             ip = peer_dict[b"ip"].split(b":")[-1].decode()
             if len(ip.split(".")) != 4:

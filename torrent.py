@@ -61,6 +61,10 @@ class Torrent:
     def size(self):
         return sum(map(lambda x: x.size_in_bytes, self.files))
 
+    @property
+    def progress(self):
+        p = (self.downloaded / self.size) * 100
+        return round(p, 2)
     def asdict(self) -> dict:
         return {
             "index": self.index,
