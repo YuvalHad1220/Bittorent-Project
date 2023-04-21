@@ -176,6 +176,11 @@ def create_torrent_file_from_single_file(piece_size, root_path, torrent_name, co
 
     return response
 
+def file_to_pieces(file_directory, pieces_directory):
+    """
+    Helper function to help us convert file into pieces. hoping the logic behind it will help understand converting pieces into files
+    """
+    pass
 
 # create_torrent_file_from_single_file(16384, r"C:\Users\Yuval
 # Hadar\Desktop\Bittorent-My_Project\tests\test.torrent", "test.torrent")
