@@ -47,7 +47,7 @@ def split_torrent_list(torrent_list: List[Torrent]):
 async def udp_loop(udp_torrents_list, settings: Settings):
     to_announce = []
     for torrent in udp_torrents_list:
-        # print(torrent.connection_info.time_to_announce)
+        print(torrent.connection_info.time_to_announce)
 
         if torrent.connection_info.state == torrent_types.wait_to_start:
             to_announce.append(announce_udp_legacy(torrent, announce_types.start, settings))
@@ -68,7 +68,7 @@ async def http_loop(http_torrents_list: List[Torrent], settings: Settings):
     # at every torrent we add, time to announce is also zero so if we dont continue it will perform same task twice; can also be the same at wait to finish and announce resume
     # so we will follow seder kdimuyot
     for torrent in http_torrents_list:
-        # print(torrent.connection_info.time_to_announce)
+        print(torrent.connection_info.time_to_announce)
         if torrent.connection_info.state == torrent_types.wait_to_start:
             to_announce.append(announce_http_legacy(torrent, announce_types.start, settings))
 
@@ -86,14 +86,12 @@ async def http_loop(http_torrents_list: List[Torrent], settings: Settings):
 
 async def main_loop(settings, torrent_handler):
     logging.debug("running tracker main loop")
-    # while True:
-    torrent_list = torrent_handler.get_torrents()
-    udp_torrents, http_torrnets = split_torrent_list(torrent_list)
-    logging.debug(f"UDP TORRENTS LEN: {len(udp_torrents)}, TCP_TORRENTS_LEN: {len(http_torrnets)}")
-    await asyncio.gather(udp_loop(udp_torrents, settings), http_loop(http_torrnets, settings))
-
-
-#   await asyncio.sleep(1)
+    while True:
+        torrent_list = torrent_handler.get_torrents()
+        udp_torrents, http_torrnets = split_torrent_list(torrent_list)
+        logging.debug(f"UDP TORRENTS LEN: {len(udp_torrents)}, TCP_TORRENTS_LEN: {len(http_torrnets)}")
+        await asyncio.gather(udp_loop(udp_torrents, settings), http_loop(http_torrnets, settings))
+        await asyncio.sleep(1)
 
 
 async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings):

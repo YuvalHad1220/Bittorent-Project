@@ -18,7 +18,7 @@ import json
 
 import bencoding
 
-from flask import  make_response
+from flask import make_response
 
 
 class sort_types:
@@ -81,7 +81,7 @@ def print_bytes_as_bits(bytes_arr):
     print(''.join(['{:08b}'.format(b) for b in bytes_arr]))
 
 
-def create_torrent_file_from_directory(piece_size, root_path, comments = None):
+def create_torrent_file_from_directory(piece_size, root_path, torrent_name, comments=None):
     # Create a list to hold the file dictionaries
     files = []
     pieces_list = []
@@ -136,11 +136,12 @@ def create_torrent_file_from_directory(piece_size, root_path, comments = None):
 
     # Set the appropriate headers
     response.headers.set('Content-Type', 'application/x-bittorrent')
-    response.headers.set('Content-Disposition', 'attachment', filename=f"{os.path.basename(root_path)}.torrent")
+    response.headers.set('Content-Disposition', 'attachment', filename=f"{torrent_name}.torrent")
 
     return response
 
-def create_torrent_file_from_single_file(piece_size, root_path, comments = None):
+
+def create_torrent_file_from_single_file(piece_size, root_path, torrent_name, comments=None):
     torrent = {
         'info': {
             'name': os.path.basename(root_path),
@@ -171,7 +172,7 @@ def create_torrent_file_from_single_file(piece_size, root_path, comments = None)
     response = make_response(encoded)
     # Set the appropriate headers
     response.headers.set('Content-Type', 'application/x-bittorrent')
-    response.headers.set('Content-Disposition', 'attachment', filename=f"{os.path.basename(root_path)}.torrent")
+    response.headers.set('Content-Disposition', 'attachment', filename=f"{torrent_name}.torrent")
 
     return response
 

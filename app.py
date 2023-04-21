@@ -61,10 +61,10 @@ def create_torrentx():
         # Process the form data as needed
 
         if os.path.isfile(filepath):
-            torrent = create_torrent_file_from_single_file(piece_size, filepath, comments)
+            torrent = create_torrent_file_from_single_file(piece_size, filepath, torrent_name, comments)
 
         else:
-            torrent = create_torrent_file_from_directory(piece_size, filepath, comments)
+            torrent = create_torrent_file_from_directory(piece_size, filepath, torrent_name, comments)
 
         return torrent
 
