@@ -1,14 +1,14 @@
 import struct
 
 from connection_handlers.peer_handler import ConnectedPeer, make_handshake, Request
-from connection_handlers import trakcer_request_handler
+from connection_handlers import trakcer_announce_handler
 
 from database.torrent_handler import TorrentHandler
 from settings.settings import read_settings_file
 import asyncio
 import threading
 
-BLOCK_SIZE = 0x1000
+BLOCK_SIZE = 0xf00
 
 
 class downloadHandler:
@@ -49,9 +49,9 @@ class downloadHandler:
         pass
 
     def save_block_to_piece(self, block):
-        for i in range(len(block)):
-            self.current_piece_data[self.block_offset + i] = block[i]
-
+        # for i in range(len(block)):
+        #     self.current_piece_data[self.block_offset + i] = block[i]
+        pass
     def get_next_block(self, block):
         if self.current_piece_index > self.piece_list_length:
             print("finished downloading!!!!")
@@ -62,7 +62,8 @@ class downloadHandler:
         else:
             self.block_offset += len(block)
 
-        print("proceeded to ask for next block")
+        print(round(100 * self.block_offset / self.piece_size,2), "% in piece")
+        print(round(100 * self.current_piece_index / self.piece_list_length), "% in torrent")
         self.request_block()
 
 
