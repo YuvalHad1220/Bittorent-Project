@@ -86,12 +86,12 @@ async def http_loop(http_torrents_list: List[Torrent], settings: Settings):
 
 async def main_loop(settings, torrent_handler):
     logging.debug("running tracker main loop")
-    while True:
-        torrent_list = torrent_handler.get_torrents()
-        udp_torrents, http_torrnets = split_torrent_list(torrent_list)
-        logging.debug(f"UDP TORRENTS LEN: {len(udp_torrents)}, TCP_TORRENTS_LEN: {len(http_torrnets)}")
-        await asyncio.gather(udp_loop(udp_torrents, settings), http_loop(http_torrnets, settings))
-        await asyncio.sleep(1)
+    # while True:
+    torrent_list = torrent_handler.get_torrents()
+    udp_torrents, http_torrnets = split_torrent_list(torrent_list)
+    logging.debug(f"UDP TORRENTS LEN: {len(udp_torrents)}, TCP_TORRENTS_LEN: {len(http_torrnets)}")
+    await asyncio.gather(udp_loop(udp_torrents, settings), http_loop(http_torrnets, settings))
+        # await asyncio.sleep(1)
 
 
 async def announce_http_legacy(torrent: Torrent, event: str, settings: Settings):

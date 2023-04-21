@@ -85,7 +85,7 @@ def make_handshake(torrent: Torrent, settings: Settings, peer_addr):
     handshake = Handshake(torrent.info_hash, (settings.user_agent + settings.random_id).encode())
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(0.8)
+    sock.settimeout(0.1)
     try:
         sock.connect(peer_addr)
         sock.send(handshake.to_bytes())
@@ -146,7 +146,7 @@ class ConnectedPeer:
                     req = Request.from_bytes(payload)
 
                 case msg_types.piece:
-                    self.download_handler.on_block(payload)
+                    self.download_handler.on_block(msg_len, payload)
 
                 case msg_types.choke:
                     self.peer_choked = True
@@ -161,4 +161,4 @@ class ConnectedPeer:
                 self.sock.send(unchoke)
                 self.choked = False
 
-            time.sleep(1)
+            time.sleep(0.6)
