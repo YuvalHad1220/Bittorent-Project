@@ -10,7 +10,7 @@ import threading
 from torrent import Torrent
 from piece_handler import PieceHandler
 
-BLOCK_SIZE = 0x1000
+BLOCK_SIZE = 0x100
 
 
 class downloadHandlerTCP:
@@ -18,61 +18,50 @@ class downloadHandlerTCP:
         self.torrent = torrent
         self.settings = settings
         self.connections = []
-
-        self.piece_list_length = len(self.torrent.pieces_info.pieces_hashes_list)
-        self.piece_size = self.torrent.pieces_info.piece_size_in_bytes
-        self.current_piece_index = 0
         self.current_piece_data = bytearray([0]) * self.torrent.pieces_info.piece_size_in_bytes
-        self.block_offset = 0
-        self.req = None
+        self.ph = PieceHandler(torrent)
+
+    def download_block(self, needed_piece, block_offset, block_size):
+        request = Request(needed_piece, block_offset, block_size)
+        for connection in self.connections:
+            connection.to_send.append(request.to_bytes())
+
+    def run(self):
+        # thats how we gather blocks
+        needed_piece = self.ph.needed_piece_to_download_index()
+        block_offset = 0
+        self.download_block(needed_piece, block_offset, BLOCK_SIZE)
+
+    def on_block(self, msg_len, payload):
+        msg_type, piece_index, block_offset = struct.unpack('! b i i', payload[:9])
+        block_length = msg_len - 9
+        block = payload[9:]
+
+        for i in range(block_length):
+            if i < len(block):
+                self.current_piece_data[i + block_offset] = block[i]
+            else:
+                self.current_piece_data[i + block_offset] = 0
+
+        next_offset = block_offset + block_length
+        if block_offset + block_length >= self.torrent.pieces_info.piece_size_in_bytes:
+            self.ph.on_validated_piece(self.current_piece_data)
+            next_offset = 0
+        self.download_block(self.ph.needed_piece_to_download_index(), next_offset, BLOCK_SIZE)
 
     def gatherConnectables(self):
-        connectables = [make_handshake(torrent1, settings, peer) for peer in torrent1.peers]
-        connectables = [connectable for connectable in connectables if connectable is not None]
-        self.connections = [ConnectedPeer(x, self) for x in connectables][:1]
+        import random
+        random.shuffle(torrent1.peers)
+        for peer in torrent1.peers:
+            res = make_handshake(torrent1, settings, peer)
+            if res:
+                self.connections = [ConnectedPeer(res, self)]
+                break
 
     def startConnectables(self):
         for connectable in self.connections:
             threading.Thread(target=connectable.run).start()
         print("connected to each peer that we had a handshake with")
-
-    def on_block(self, msg_len, payload):
-        # <offset> is a 4-byte integer indicating the offset of this block within the piece, in bytes.
-
-        msg_type, piece_index, block_offset = struct.unpack('! b i i', payload[:9])
-        block = payload[9:]
-
-        self.build_piece_into_file_and_update(block, block_offset, msg_len)
-        self.request_block()
-
-    def request_block(self):
-        self.req = Request(self.current_piece_index, self.block_offset, BLOCK_SIZE)
-        for connection in self.connections:
-            connection.to_send.append(self.req.to_bytes())
-
-    def build_piece_into_file_and_update(self, data, offset, msg_length):
-        block_length = msg_length - 9  # first 4 bytes is the original length of the message, 9 bytes is for other unrelated data
-        print(
-            f"received block length: {block_length} actual block_length: {len(data)} requested block length {BLOCK_SIZE} piece_index: {self.current_piece_index} offset: {self.block_offset}")
-
-        for i in range(block_length):
-            if i < len(data):
-                self.current_piece_data[i + offset] = data[i]
-            else:
-                self.current_piece_data[i + offset] = 0
-        #        print(self.current_piece_data[:offset + len(data)])
-
-        self.block_offset += block_length
-        print(f"offset: {self.block_offset} piece_size: {self.piece_size}")
-
-        if self.block_offset + 1 >= self.piece_size:
-            import piece_handler
-            ph = piece_handler.PieceHandler(self.torrent)
-            ph.on_validated_piece(self.current_piece_data)
-            self.current_piece_index += 1
-            self.block_offset = 0
-            self.current_piece_data = bytearray([0]) * self.torrent.pieces_info.piece_size_in_bytes
-            print("moving into next piece")
 
 
 torrent_handler = TorrentHandler("./database/torrent.db")
@@ -84,7 +73,7 @@ asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))
 x = downloadHandlerTCP(torrent1, settings)
 x.gatherConnectables()
 x.startConnectables()
-x.request_block()
+x.run()
 
 import aioudp
 from typing import List
@@ -129,7 +118,7 @@ class downloadHandlerUDP:
         self.piece_index = self.piece_handler.needed_piece_to_download_index()
 
         self.downloading = True if self.piece_index != -1 else False
-        self.uploading = True
+        self.uploading = False if self.piece_index != -1 else True
 
         self.trans_id = 0
         self.peer_connections = List[connectableUDP]

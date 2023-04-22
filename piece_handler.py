@@ -9,7 +9,6 @@ class PieceHandler:
         self.torrent = torrent
         self.save_path = torrent.download_path
         self.downloaded_pieces = -1
-
         self.get_existing_pieces()
 
     def get_existing_pieces(self):
@@ -18,6 +17,7 @@ class PieceHandler:
         pieces_path.mkdir(exist_ok=True)
         pieces_count = len(list(pieces_path.glob('*')))
         self.downloaded_pieces = pieces_count
+        print(self.downloaded_pieces)
 
     def on_validated_piece(self, validated_piece):
         """
@@ -33,9 +33,9 @@ class PieceHandler:
 
     def needed_piece_to_download_index(self):
         if len(self.torrent.pieces_info.pieces_hashes_list) < self.downloaded_pieces:
-            return self.downloaded_pieces
+            return -1
         
-        return -1
+        return self.downloaded_pieces
     
     def validate_piece(self, piece):
         """

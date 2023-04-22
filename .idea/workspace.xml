@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="01a8ddf7-68fc-4aa3-9894-946d371b76b0" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/connection_handlers/peer_handler.py" beforeDir="false" afterPath="$PROJECT_DIR$/connection_handlers/peer_handler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/download_handler.py" beforeDir="false" afterPath="$PROJECT_DIR$/download_handler.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/piece_handler.py" beforeDir="false" afterPath="$PROJECT_DIR$/piece_handler.py" afterDir="false" />
     </list>
