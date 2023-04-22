@@ -161,4 +161,4 @@ class ConnectedPeer:
                 self.sock.send(unchoke)
                 self.choked = False
 
-            time.sleep(0.6)
+            time.sleep(0.1)
