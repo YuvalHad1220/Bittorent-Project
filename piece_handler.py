@@ -61,10 +61,19 @@ class PieceHandler:
         print(piece_hash)
         return res == piece_hash
     
-
     def on_download_finish(self):
+
         """
         Once we have all pieces we need to construct the file.
 
         """
         pass
+
+    def return_block(self, piece_index, block_offset, block_length):
+        with open(self.torrent.download_path, 'rb') as f:
+            byte_pos = piece_index * self.torrent.pieces_info.piece_size_in_bytes + block_offset
+            f.seek(byte_pos)
+            # Read the requested block
+            block_data = f.read(block_length)
+
+        return block_data
