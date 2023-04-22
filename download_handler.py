@@ -70,10 +70,10 @@ settings = read_settings_file("./settings/settings.json")
 torrent1 = torrent_handler.get_torrents()[0]
 asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))
 
-x = downloadHandlerTCP(torrent1, settings)
-x.gatherConnectables()
-x.startConnectables()
-x.run()
+# x = downloadHandlerTCP(torrent1, settings)
+# x.gatherConnectables()
+# x.startConnectables()
+# x.run()
 
 import aioudp
 from typing import List
@@ -103,6 +103,7 @@ async def connectToPeerUDP(peer_addr):
     except TimeoutError:
         return None
 
+MAX_TIME_TO_WAIT = 0.1
 
 class downloadHandlerUDP:
     """
@@ -122,25 +123,32 @@ class downloadHandlerUDP:
 
         self.trans_id = 0
         self.peer_connections = List[connectableUDP]
-        self.my_connection = None
+        self.conn_as_server = None
 
     async def main_loop(self):
-        conn_as_server = await aioudp.open_local_endpoint("127.0.0.1", 1234)
+        self.conn_as_server = await aioudp.open_local_endpoint("127.0.0.1", 1234)
+        print("started connection as server")
         while True:
             tasks = []
             for connection in self.peer_connections:
                 tasks.append(self.listen_for_msg(connection))
 
             await asyncio.gather(*tasks)
-
+            print("finished listening for requests from peers")
             # after we finished with requests we need to make sure that we didnt get any new requests
 
-            msg, addr = await asyncio.wait_for(conn_as_server.receive(), 1)
+            msg, addr = await asyncio.wait_for(self.conn_as_server.receive(), MAX_TIME_TO_WAIT)
 
             if msg == b'bittorrent':
-                self.onPeerTryingToConnectUDP(addr)
+                print("got a new connection")
+                await self.onPeerTryingToConnectUDP(addr)
+                print("added incoming connection to my connections")
 
-            # after we added that connection to conns we have then we are fine
+
+
+            print("now requesting from peers")
+            pass
+            await asyncio.sleep(MAX_TIME_TO_WAIT)
 
     async def gather_connectables(self):
         for peer_addr in self.torrent.peers:
@@ -149,17 +157,35 @@ class downloadHandlerUDP:
                 self.peer_connections.append(res)
 
     async def listen_for_msg(self, connectable: connectableUDP):
-        msg, addr = await asyncio.wait_for(connectable.conn_with_peer.recieve(), 1)
+        msg, addr = await asyncio.wait_for(connectable.conn_with_peer.recieve(), MAX_TIME_TO_WAIT)
         if msg:
-            # do something with msg
-            pass
+            print(msg)
 
     async def onPeerTryingToConnectUDP(self, addr):
-        trans_id = TorrentHandler("...").get_by_addr(addr)
-        pass
+        th = TorrentHandler("./database/torrent.db")
+        trans_id = 0
+        for torrent in th.get_torrents():
+            addrs = [addr for addr, port in torrent.peers]
+            if addr in addrs:
+                trans_id += 1
+
+        self.conn_as_server.send(trans_id, addr)
+        connectable = connectableUDP(addr, self.conn_as_server, trans_id)
+        self.peer_connections.append(connectable)
 
     async def on_piece_request(self):
         pass
 
-    async def on_piece_recieve(self):
+    async def on_piece_receive(self):
         pass
+
+    async def request_piece(self, trans_id, piece_index, block_offset, block_length):
+        # 4 bytes - length
+        # 1 bytes - trans id
+        # 1 bytes - msg type
+        # 4 bytes - piece
+        # 4 bytes - block offset
+        # 4 bytes - block length
+
+        return struct.pack('i b b i i i', 4 + 1 + 1 + 4 + 4 + 4, trans_id, TYPES['REQUEST'], piece_index, block_offset,
+                           block_length)
