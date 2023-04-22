@@ -234,5 +234,5 @@ class downloadHandlerUDP:
 
 
 udp = downloadHandlerUDP(torrent1)
-
+asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))
 asyncio.run(udp.main_loop())
