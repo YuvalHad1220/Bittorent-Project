@@ -69,19 +69,21 @@ class dctodb:
         self.basic_fields, self.dc_fields, self.list_fields = _split_fields(self.dc)  # only fields that are not dcs or lists
         self.dc_in_class_mappings = dict()
         self.lists_in_class_mappings = dict()
+        self.conn = None
+
         self._init_sub_class_connections()
         self.create_table()
-        self.transaction_connection = None
 
     def _execute(self, command, args=None):
-        conn = _create_connection(self.db_filename)
-        cur = conn.cursor()
+        if not self.conn: 
+            self.conn = _create_connection(self.db_filename)
+        cur = self.conn.cursor()
         if args:
             res = cur.execute(command, args)
         else:
             res = cur.execute(command)
 
-        return res, conn
+        return res
 
     def create_table(self):
         command = "CREATE TABLE IF NOT EXISTS {} (id integer PRIMARY KEY AUTOINCREMENT, {});"
@@ -90,13 +92,15 @@ class dctodb:
             _sql_represent(col_name, col_type) for col_name, col_type in self.extra_columns.items()]
         args = ', '.join(args)
         command = command.format(self.table_name, args)
-        _, conn = self._execute(command)
-        conn.close()
+        _ = self._execute(command)
+        self.conn.close()
+        self.conn = None
 
     def _get_count(self) -> int:
-        res, conn = self._execute(f"SELECT COUNT(*) FROM {self.dc.__name__}")
+        res = self._execute(f"SELECT COUNT(*) FROM {self.dc.__name__}")
         res = res.fetchone()[0]
-        conn.close()
+        self.conn.close()
+        self.conn = None
         return res
 
     def _init_sub_class_connections(self):
@@ -150,16 +154,18 @@ class dctodb:
 
         command = command.format(self.table_name, ', '.join(variable_names), ','.join(['?'] * len(variable_names)))
 
-        _, conn = self._execute(command, variable_values)
-        res = conn.commit()
+        _= self._execute(command, variable_values)
+        res = self.conn.commit()
         instance.index = self._get_count()
-
-        conn.close()
 
         if self.dc_in_class_mappings:
             self._insert_dcs(instance)
         if self.lists_in_class_mappings:
             self._insert_list(instance)
+
+        if self.conn:
+            self.conn.close()
+            self.conn = None
 
     def _fetch_lists_from_subtable(self, index):
         # we know what's the table name, so we will just fetch_where id is the same as ours
@@ -185,10 +191,11 @@ class dctodb:
 
         command = "SELECT * FROM {};"
         command = command.format(self.table_name)
-        res, conn = self._execute(command)
+        res = self._execute(command)
         rows = res.fetchall()
-        conn.close()
-
+        self.conn.close()
+        self.conn = None
+        
         for row in rows:
             index = row[0]
             basic_args = row[1:]

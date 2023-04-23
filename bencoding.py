@@ -83,37 +83,26 @@ def decode_dict(encoded_bytes) -> Tuple[Dict[Any,Any]]:
 
 
 def decode(encoded_bytes) -> Tuple[Any, int]:
-    index = 0
-    while index < len(encoded_bytes) and encoded_bytes[index] != ord(b"e"):
-        current_char = encoded_bytes[index]
+    current_char = encoded_bytes[0]
+    if current_char == ord(b"i"):
+        return decode_int(encoded_bytes)
+    if current_char == ord(b"l"):
+        return decode_list(encoded_bytes)
 
-        if current_char == ord(b"i"):
-            value, scanned_length = decode_int(encoded_bytes[index:])
-            index += scanned_length
-            break
-        if current_char == ord(b"l"):
-            value, scanned_length = decode_list(encoded_bytes[index:])
-            index += scanned_length
-            break
-        if current_char == ord(b"d"):
-            value, scanned_length = decode_dict(encoded_bytes[index:])
-            index += scanned_length
-            break
-        # default, meaning its string\bytes
-        value, scanned_length = decode_str_or_bytes(encoded_bytes[index:])
-        index += scanned_length
-        break
+    if current_char == ord(b"d"):
+        return decode_dict(encoded_bytes)
+        
+    # default, meaning its string\bytes
+    return decode_str_or_bytes(encoded_bytes)
 
-    return value, index
 
 
 
 if __name__ == "__main__":
-    tf = "added_torrent_files\The.Last.of.Us.S01E01.HDR.2160p.WEB.H265-CAKES[Fuzer].torrent"
+    dic = {
+        "name": "yuval",
+        "age": [1,"123",1, {"yuvali":"yes"}]
+    }
 
-    with open(tf, 'rb') as f:
-        data = f.read()
-
-    data = decode(data)[0]
-
-    print(data[b"info"])
+    encoded = encode(dic)
+    print(decode(encoded))
