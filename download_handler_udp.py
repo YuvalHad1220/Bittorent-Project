@@ -1,83 +1,17 @@
 import struct
 
-from connection_handlers.peer_handler import ConnectedPeer, make_handshake, Request
 from connection_handlers import trakcer_announce_handler
-
 from database.torrent_handler import TorrentHandler
-from settings.settings import read_settings_file
 import asyncio
-import threading
 from torrent import Torrent
 from piece_handler import PieceHandler
+import aioudp
+from settings.settings import read_settings_file, Settings
+from typing import List
+import encryption
 
 BLOCK_SIZE = 0x100
-
-
-class downloadHandlerTCP:
-    def __init__(self, torrent, settings):
-        self.torrent = torrent
-        self.settings = settings
-        self.connections = []
-        self.current_piece_data = bytearray([0]) * self.torrent.pieces_info.piece_size_in_bytes
-        self.ph = PieceHandler(torrent)
-
-    def download_block(self, needed_piece, block_offset, block_size):
-        request = Request(needed_piece, block_offset, block_size)
-        for connection in self.connections:
-            connection.to_send.append(request.to_bytes())
-
-    def run(self):
-        # thats how we gather blocks
-        needed_piece = self.ph.needed_piece_to_download_index()
-        block_offset = 0
-        self.download_block(needed_piece, block_offset, BLOCK_SIZE)
-
-    def on_block(self, msg_len, payload):
-        msg_type, piece_index, block_offset = struct.unpack('! b i i', payload[:9])
-        block_length = msg_len - 9
-        block = payload[9:]
-
-        for i in range(block_length):
-            if i < len(block):
-                self.current_piece_data[i + block_offset] = block[i]
-            else:
-                self.current_piece_data[i + block_offset] = 0
-
-        next_offset = block_offset + block_length
-        if block_offset + block_length >= self.torrent.pieces_info.piece_size_in_bytes:
-            self.ph.on_validated_piece(self.current_piece_data)
-            next_offset = 0
-        self.download_block(self.ph.needed_piece_to_download_index(), next_offset, BLOCK_SIZE)
-
-    def gatherConnectables(self):
-        import random
-        random.shuffle(torrent1.peers)
-        for peer in torrent1.peers:
-            res = make_handshake(torrent1, settings, peer)
-            if res:
-                self.connections = [ConnectedPeer(res, self)]
-                break
-
-    def startConnectables(self):
-        for connectable in self.connections:
-            threading.Thread(target=connectable.run).start()
-        print("connected to each peer that we had a handshake with")
-
-
-torrent_handler = TorrentHandler("./database/torrent.db")
-settings = read_settings_file("./settings/settings.json")
-
-torrent1 = torrent_handler.get_torrents()[0]
-# asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))
-
-# x = downloadHandlerTCP(torrent1, settings)
-# x.gatherConnectables()
-# x.startConnectables()
-# x.run()
-
-import aioudp
-from typing import List
-
+MAX_TIME_TO_WAIT = 0.1
 TYPES = {
     "REQUEST": 1,
     "PIECE": 2,
@@ -114,25 +48,30 @@ def create_block_request_message(trans_id, piece_index, block_offset, block_leng
 
 
 class connectableUDP:
-    def __init__(self, peer_addr, conn, trans_id):
+    def __init__(self, peer_addr, conn, trans_id, peer_pub_key = None):
         self.peer_addr = peer_addr
         self.trans_id = trans_id
         self.conn_with_peer = conn
+        self.peer_pub_key = peer_pub_key
         print(f"{peer_addr} - {trans_id}")
 
 
-async def connect_to_peer(peer_addr):
+async def connect_to_peer(peer_addr, public_key = None):
     conn_with_peer = await aioudp.open_remote_endpoint(peer_addr)
-    conn_with_peer.send(b'bittorrent')
+    msg = b'bittorrent'
+    if public_key:
+        msg += public_key
+    conn_with_peer.send(msg)
     try:
-        trans_id = await asyncio.wait_for(conn_with_peer.receive(), timeout=1)
+        resp = await asyncio.wait_for(conn_with_peer.receive(), timeout=1)
+        if public_key:
+            assert resp[1:] == public_key
+        trans_id = resp[0]
         return connectableUDP(peer_addr, conn_with_peer, trans_id)
 
     except TimeoutError:
         return None
 
-
-MAX_TIME_TO_WAIT = 0.1
 
 
 class downloadHandlerUDP:
@@ -140,7 +79,7 @@ class downloadHandlerUDP:
     using bittorrentx protocol
     """
 
-    def __init__(self, torrent: Torrent) -> None:
+    def __init__(self, torrent: Torrent, settings: Settings) -> None:
         self.torrent = torrent
 
         self.piece_handler = PieceHandler(self.torrent)
@@ -155,8 +94,13 @@ class downloadHandlerUDP:
         self.peer_connections: List[connectableUDP] = []
         self.conn_as_server = None
 
-
         self.current_piece_data = bytearray([0]) * self.torrent.pieces_info.piece_size_in_bytes
+
+        if settings.download_torrentx_encryption:
+            self.pub_key, self.private_key = encryption.create_key_pairs()
+        else:
+            self.pub_key, self.private_key = None, None
+
 
     async def main_loop(self):
         self.conn_as_server = await aioudp.open_local_endpoint("127.0.0.1", 1234)
@@ -170,9 +114,9 @@ class downloadHandlerUDP:
             except TimeoutError:
                 msg = None
 
-            if msg == b'bittorrent':
+            if b'bittorrent' in msg:
                 print("got a new connection")
-                await self.on_peer_trying_to_connect(addr)
+                await self.on_peer_trying_to_connect(msg, addr)
                 print("added incoming connection to my connections")
 
             tasks = []
@@ -189,7 +133,7 @@ class downloadHandlerUDP:
 
     async def gather_connectables(self):
         for peer_addr in self.torrent.peers:
-            res = await connect_to_peer(peer_addr)
+            res = await connect_to_peer(peer_addr, self.pub_key)
             if res:
                 self.peer_connections.append(res)
 
@@ -214,7 +158,7 @@ class downloadHandlerUDP:
             # block does not exist, for now in current implementation we just pass
             pass
 
-    async def on_peer_trying_to_connect(self, addr):
+    async def on_peer_trying_to_connect(self, msg, addr):
         th = TorrentHandler("./database/torrent.db")
         trans_id = 1
         for torrent in th.get_torrents():
@@ -223,12 +167,19 @@ class downloadHandlerUDP:
                 trans_id += 1
 
         print("decided trans id:", trans_id)
-        self.conn_as_server.send(struct.pack('b', trans_id), addr)
-        connectable = connectableUDP(addr, self.conn_as_server, trans_id)
+
+        resp = struct.pack('! b', trans_id)
+
+        peer_pub_key = None
+        if msg != b'bittorrent': # then we also got a public key
+            resp += msg[10:]
+            peer_pub_key = msg[10:]
+        self.conn_as_server.send(resp, addr)
+        connectable = connectableUDP(addr, self.conn_as_server, trans_id, peer_pub_key)
         self.peer_connections.append(connectable)
 
     async def on_block_request(self, connectable, addr, trans_id, piece_index, block_offset, block_length):
-        data = self.piece_handler.return_block(piece_index, block_offset, block_length)
+        data = self.piece_handler.return_block(piece_index, block_offset, block_length, connectable.peer_pub_key)
         block_len = len(data)
         print(f"data being sent: {data}")
         data = create_block_msg(data, trans_id, piece_index, block_offset, block_len)
@@ -237,6 +188,10 @@ class downloadHandlerUDP:
 
     async def on_block_receive(self, msg, length, block_offset, block_length):
         data = msg[20: length + 1]
+        if self.public_key:
+            data = encryption.decrypt_using_private(data, self.private_key)
+            block_length = len(data)
+
         print(f"block is: {data}")
         for i in range(block_length):
             self.current_piece_data[i + block_offset] = data[i]
@@ -256,6 +211,12 @@ class downloadHandlerUDP:
             connection.conn_with_peer.send(block_req_message)
             
 
-udp = downloadHandlerUDP(torrent1)
+
+torrent_handler = TorrentHandler("./database/torrent.db")
+settings = read_settings_file("./settings/settings.json")
+
+torrent1 = torrent_handler.get_torrents()[0]
+
+udp = downloadHandlerUDP(torrent1, settings)
 asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))
 asyncio.run(udp.main_loop())

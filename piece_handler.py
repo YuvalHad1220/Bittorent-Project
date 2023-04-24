@@ -2,6 +2,7 @@ from torrent import Torrent
 import pathlib
 import hashlib
 import os
+import encryption
 
 class PieceHandler:
 
@@ -76,11 +77,14 @@ class PieceHandler:
                         f.write(piece_file.read())
 
 
-    def return_block(self, piece_index, block_offset, block_length):
+    def return_block(self, piece_index, block_offset, block_length, public_key = None):
         with open(self.torrent.download_path, 'rb') as f:
             byte_pos = piece_index * self.torrent.pieces_info.piece_size_in_bytes + block_offset
             f.seek(byte_pos)
             # Read the requested block
             block_data = f.read(block_length)
 
-        return block_data
+        if not public_key:
+            return block_data
+        
+        return encryption.encrypt_using_public(block_data, public_key)

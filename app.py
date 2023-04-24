@@ -1,8 +1,8 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 from settings.settings import read_settings_file
 from app_operations import *
 from database.torrent_handler import TorrentHandler
-from utils import get_client_list, create_torrent_file_from_directory, create_torrent_file_from_single_file
+from utils import get_client_list
 from connection_handlers.trakcer_announce_handler import main_loop
 import threading
 from thread_handler import ThreadHandler
