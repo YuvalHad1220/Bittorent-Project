@@ -6,14 +6,12 @@ class Settings:
     path: str
     default_download_path: str
     default_file_archive_path: str
+    download_torrentx_encryption: bool
     user_agent: str = "-qB4450-"
     random_id: str = rand_str(12)
     peer_id: str = "qBittorrent/4.4.5"
     port: int = 25565
     size_calc: str = "SI"
-    max_torrentx_file_size: int = 15000000
-    concurrent_connections_per_torrent: int = 40
-    block_size_per_piece = 128 * sizes["KB"]
 
     def asdict(self):
         self_dict = asdict(self)
@@ -25,19 +23,7 @@ class Settings:
 
     def update_settings(self, **kwargs):
         for key,value in kwargs.items():
-            print(key, value)
             setattr(self, key, value)
-            print(getattr(self, key))
-
-        
-        # self.default_download_path = kwargs['default_download_path']
-        # self.default_file_archive_path= kwargs['default_file_archive_path']
-        # self.port = kwargs['port']
-        # self.max_torrentx_file_size = kwargs['max_torrentx_file_size']
-        # self.size_calc = kwargs['size_calc']
-        # self.peer_id = kwargs['peer_id']
-        # self.random_id = kwargs['random_id']
-        # self.
 
         self.update()
 def create_settings_file(path):
@@ -45,7 +31,8 @@ def create_settings_file(path):
     default_download_path = default_download_path.as_posix()
     default_file_archive_path = get_cwd_directory() / "FileArchive"
     default_file_archive_path = default_file_archive_path.as_posix()
-    settings = Settings(path, default_download_path, default_file_archive_path)
+    download_torrentx_encryption = True
+    settings = Settings(path, default_download_path, default_file_archive_path, download_torrentx_encryption)
     settings.update()
     return settings
 

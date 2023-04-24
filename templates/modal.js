@@ -153,6 +153,7 @@ function update_settings(){
   var dict = {
     'default_download_path': document.getElementById('defaultdownloadPath').value,
     'default_file_archive_path': document.getElementById('defaultArchivePath').value,
+    'download_torrentx_encryption': document.getElementById('download_torrentx_encryption').value,
     'port': document.getElementById('port').value,
     'size_calc': document.getElementById('byteType').value,
     'max_torrentx_file_size': size_in_bytes,

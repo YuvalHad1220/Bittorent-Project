@@ -22,4 +22,6 @@ def handle_torrent(request: Request, torrent_handler: TorrentHandler):
 
             
 def update_settings(settings_obj, request):
+    print('got here')
+    request['download_torrentx_encryption'] = True if request['download_torrentx_encryption'] == 'True' else False
     settings_obj.update_settings(**request.get_json())

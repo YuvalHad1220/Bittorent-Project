@@ -195,7 +195,7 @@ class dctodb:
         rows = res.fetchall()
         self.conn.close()
         self.conn = None
-        
+
         for row in rows:
             index = row[0]
             basic_args = row[1:]
@@ -222,9 +222,11 @@ class dctodb:
 
         command = "SELECT * FROM {} WHERE {};"
         command = command.format(self.table_name, condition)
-        res, conn = self._execute(command)
+        res = self._execute(command)
         rows = res.fetchall()
-        conn.close()
+        
+        self.conn.close()
+        self.conn = None
 
         for row in rows:
             index = row[0]

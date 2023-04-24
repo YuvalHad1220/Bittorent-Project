@@ -31,6 +31,7 @@ def edit_settings():
     if request.method == "GET":
         return jsonify(settings.asdict())
 
+    print("hey")
     update_settings(settings, request)
 
     return SUCCESS
@@ -43,9 +44,6 @@ def get_available_clients():
 
 @app.route("/torrents", methods=["POST"])
 def ret_torrent_list():
-    payload = request.json
-
-    # first we will return an empty list so we can tell what to display
     return jsonify([torrent_obj.asdict() for torrent_obj in torrent_handler.get_torrents()])
 
 
@@ -54,17 +52,19 @@ def create_torrentx():
     if request.method == "POST":
         torrent_name = request.form['torrent_name']
         piece_size = int(request.form['piece_size'])
-        public_key = request.form['public_key']
-        trackers = request.form['trackers']
+        if trackers:
+            trackers = request.form['trackers'].split('\n')
+        else:
+            trackers = None
         comments = request.form['comments']
         filepath = request.form['file_path']
         # Process the form data as needed
 
         if os.path.isfile(filepath):
-            torrent = create_torrent_file_from_single_file(piece_size, filepath, torrent_name, comments)
+            torrent = create_torrent_file_from_single_file(piece_size, filepath, torrent_name, comments, trackers)
 
         else:
-            torrent = create_torrent_file_from_directory(piece_size, filepath, torrent_name, comments)
+            torrent = create_torrent_file_from_directory(piece_size, filepath, torrent_name, comments, trackers)
 
         return torrent
 
@@ -82,7 +82,7 @@ def add_torrent():
 
 @app.route("/", methods=["GET"])
 def homepage():
-    title = "my torrent project"
+    title = "bitTorrentX Project"
     page = render_template("main-page.html", title=title)
     return page
 
