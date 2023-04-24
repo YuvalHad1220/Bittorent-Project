@@ -29,8 +29,12 @@ class TorrentConnectionInfo:
 @dataclass
 class Pieces:
     piece_size_in_bytes: int
-    pieces_hashes_list: List[bytes]
+    pieces_hashes: bytes
     index: int = 0
+
+    @property
+    def pieces_hashes_list(self):
+        return [self.pieces_hashes[i:i+20] for i in range(0, len(self.pieces_hashes), 20)]
 
 @dataclass
 class File:
@@ -105,10 +109,11 @@ def create_torrent(torrent_file_path, torrent_file_bytes, download_path, to_decr
     torrent_hash = hashlib.sha1(encode(info)).digest()
     name = info[b'name'].decode()
     piece_size = info[b'piece length']
-    pieces_list = pieces_list_from_bytes(info[b'pieces'])
+    # pieces_list = pieces_list_from_bytes(info[b'pieces'])
+    pieces = info[b'pieces']
     metadata = encode(decoded)
     is_torrentx = b'torrentx' in decoded
-    pieces_obj = Pieces(piece_size, pieces_list)
+    pieces_obj = Pieces(piece_size, pieces)
     # if multiple files - than we push a list that is filled with dicts such as {b'length: int, b'path: list[path]}
     if b'files' in info:
         file_list = create_files_path(info, piece_size)
