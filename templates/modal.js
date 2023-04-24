@@ -140,7 +140,6 @@ function humanFileSizeLocal(bytes) {
 
 function display_bytes(){
   var res_arr = humanFileSizeLocal(size_in_bytes);
-  document.getElementById('TorrentxSize').value = res_arr[0];
   document.getElementById('fileSizeByteType').value = res_arr[1];
 
 }

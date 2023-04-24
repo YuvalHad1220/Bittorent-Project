@@ -1,5 +1,3 @@
-import os.path
-
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file
 from settings.settings import read_settings_file
 from app_operations import *
@@ -31,7 +29,6 @@ def edit_settings():
     if request.method == "GET":
         return jsonify(settings.asdict())
 
-    print("hey")
     update_settings(settings, request)
 
     return SUCCESS
@@ -50,23 +47,8 @@ def ret_torrent_list():
 @app.route("/create_torrentx", methods=["GET", "POST"])
 def create_torrentx():
     if request.method == "POST":
-        torrent_name = request.form['torrent_name']
-        piece_size = int(request.form['piece_size'])
-        if trackers:
-            trackers = request.form['trackers'].split('\n')
-        else:
-            trackers = None
-        comments = request.form['comments']
-        filepath = request.form['file_path']
-        # Process the form data as needed
-
-        if os.path.isfile(filepath):
-            torrent = create_torrent_file_from_single_file(piece_size, filepath, torrent_name, comments, trackers)
-
-        else:
-            torrent = create_torrent_file_from_directory(piece_size, filepath, torrent_name, comments, trackers)
-
-        return torrent
+        return return_torrent_file(request)
+        
 
     return render_template("create-torrentx-page.html")
 

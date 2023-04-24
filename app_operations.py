@@ -2,6 +2,8 @@ from flask import Request
 from torrent import create_torrent
 from utils import return_path
 from database.torrent_handler import TorrentHandler
+import os
+from utils import create_torrent_file_from_directory, create_torrent_file_from_single_file
 def handle_torrent(request: Request, torrent_handler: TorrentHandler):
     download_path = request.form['downloadPath']
     to_decrypt = True if request.form['toDecrypt'] == 'True' else False
@@ -22,6 +24,23 @@ def handle_torrent(request: Request, torrent_handler: TorrentHandler):
 
             
 def update_settings(settings_obj, request):
-    print('got here')
     request['download_torrentx_encryption'] = True if request['download_torrentx_encryption'] == 'True' else False
     settings_obj.update_settings(**request.get_json())
+
+
+def return_torrent_file(request):
+        torrent_name = request.form['torrent_name']
+        piece_size = int(request.form['piece_size'])
+        if trackers:
+            trackers = request.form['trackers'].split('\n')
+        else:
+            trackers = None
+        comments = request.form['comments']
+        filepath = request.form['file_path']
+        # Process the form data as needed
+
+        if os.path.isfile(filepath):
+            return create_torrent_file_from_single_file(piece_size, filepath, torrent_name, comments, trackers)
+
+        else:
+            return create_torrent_file_from_directory(piece_size, filepath, torrent_name, comments, trackers)
