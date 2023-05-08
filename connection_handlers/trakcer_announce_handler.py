@@ -255,7 +255,6 @@ async def announce_udp_legacy(torrent: Torrent, event: str, settings: Settings):
     announce_url, port = announce_data.split(":")
     port = int(port)
     addr = (announce_url, port)
-    print(addr)
 
     init_conn_msg = build_conn_struct(settings)
     resp, remote_conn = await init_conn(init_conn_msg, addr)

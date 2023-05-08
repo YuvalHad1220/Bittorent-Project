@@ -4,6 +4,7 @@ import hashlib
 import os
 import encryption
 
+
 class PieceHandler:
 
     def __init__(self, torrent: Torrent) -> None:
@@ -25,18 +26,17 @@ class PieceHandler:
         """
         path = pathlib.Path(self.save_path)
         pieces_path = path / "pieces"
-        with open(pieces_path / f"{self.downloaded_pieces}.piece",'wb') as f:
+        with open(pieces_path / f"{self.downloaded_pieces}.piece", 'wb') as f:
             f.write(validated_piece)
             self.downloaded_pieces[piece_index] = 1
 
     def needed_piece_to_download_index(self):
         for i, piece_downloaded_value in enumerate(self.downloaded_pieces):
             if piece_downloaded_value == 0:
-                return i 
-            
+                return i
 
         return -1
-    
+
     def validate_piece(self, piece):
         """
         We will validate the piece against the current index
@@ -60,7 +60,7 @@ class PieceHandler:
         print(res)
         print(piece_hash)
         return res == piece_hash
-    
+
     def on_download_finish(self):
         self.multiple_files_from_pieces()
         # extra things to do if needed
@@ -70,13 +70,12 @@ class PieceHandler:
             file_path = pathlib.Path(self.save_path) / file_obj.path_name
             file_path.mkdir(exist_ok=True)
             with open(file_path, 'wb') as f:
-                for i in range(file_obj.first_piece_index, file_obj.last_piece_index+1):
+                for i in range(file_obj.first_piece_index, file_obj.last_piece_index + 1):
                     piece_path = os.path.join(self.torrent.file_path, str(i) + '.piece')
                     with open(piece_path, 'rb') as piece_file:
                         f.write(piece_file.read())
 
-
-    def return_block(self, piece_index, block_offset, block_length, public_key = None):
+    def return_block(self, piece_index, block_offset, block_length, public_key=None):
         with open(self.torrent.download_path, 'rb') as f:
             byte_pos = piece_index * self.torrent.pieces_info.piece_size_in_bytes + block_offset
             f.seek(byte_pos)
@@ -85,5 +84,5 @@ class PieceHandler:
 
         if not public_key:
             return block_data
-        
+
         return encryption.encrypt_using_public(block_data, public_key)
