@@ -165,9 +165,11 @@ class downloadHandlerUDP:
                 self.downloaded_piece = False
                 self.validated_piece = False
 
-                if self.piece_index == -1:
-                    print("finished downloading")
-                    sys.exit(1)
+            print(self.piece_index)
+            if self.piece_index == -1:
+                print("FINISHHHHHHHHHHHHHHHHHHHHHHHHH")
+                self.piece_handler.on_download_finish()
+
             self.request_block()
             await asyncio.sleep(MAX_TIME_TO_WAIT)
 
@@ -240,11 +242,10 @@ class downloadHandlerUDP:
             connectable.conn_with_peer.send(data, addr)
         print(f"sent to peer data, piece index: {piece_index}, block offset: {block_offset}, block length: {block_len}")
 
-    def on_piece(self, piece_index):
+    def on_piece(self, piece_index, offset):
         self.downloaded_piece = True
         print("not validated")
-        # if self.piece_handler.validate_piece(self.current_piece_data):
-        if True:
+        if self.piece_handler.validate_piece(self.current_piece_data[:offset]):
             print("validated now")
             self.piece_handler.on_validated_piece(self.current_piece_data, piece_index)
             self.validated_piece = True
@@ -252,8 +253,10 @@ class downloadHandlerUDP:
     async def on_block_receive(self, msg, piece_index, length, block_offset, block_length):
         print(f"got block: {block_offset}, got length: {block_length}, got block of piece: {piece_index}")
         data = msg[20: length + 1]
+
         if block_length == 0:
-            return self.on_piece(piece_index)
+            return self.on_piece(piece_index, self.block_offset)
+
         if self.pub_key:
             data = encryption.decrypt_using_private(data, self.private_key)
             block_length = len(data)
@@ -261,22 +264,25 @@ class downloadHandlerUDP:
         for i in range(block_length):
             if self.block_offset + i >= len(self.current_piece_data):
                 # when we downloaded all piece
-                return self.on_piece(piece_index)
+                print(f"think we downloaded")
+                return self.on_piece(piece_index, self.block_offset + i)
             else:
                 self.current_piece_data[i + self.block_offset] = data[i]
+
         self.block_offset += block_length
         print(f"got from peer data", 100 * self.block_offset / (len(self.current_piece_data) + 1))
 
     def request_block(self):
         # that function requests a block from all peers
-        for connection in self.peer_connections:
-            block_req_message = create_block_request_message(connection.trans_id, self.piece_index, self.block_offset,
-                                                             BLOCK_SIZE)
+        if not self.piece_handler.is_downloaded():
+            for connection in self.peer_connections:
+                block_req_message = create_block_request_message(connection.trans_id, self.piece_index, self.block_offset,
+                                                                 BLOCK_SIZE)
 
-            if type(connection.conn_with_peer) == aioudp.RemoteEndpoint:
-                connection.conn_with_peer.send(block_req_message)
-            else:
-                connection.conn_with_peer.send(block_req_message, connection.peer_addr)
+                if type(connection.conn_with_peer) == aioudp.RemoteEndpoint:
+                    connection.conn_with_peer.send(block_req_message)
+                else:
+                    connection.conn_with_peer.send(block_req_message, connection.peer_addr)
 
 
 torrent_handler = TorrentHandler("./database/torrent.db")
@@ -288,9 +294,8 @@ for torrent in torrent_handler.get_torrents():
         torrent1 = torrent
         break
 #
-# udp = downloadHandlerUDP(torrent1, settings)
-# asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))
-# asyncio.run(udp.main_loop())
+udp = downloadHandlerUDP(torrent1, settings)
+asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))
+asyncio.run(udp.main_loop())
 
 
-PieceHandler(torrent1).on_download_finish()
