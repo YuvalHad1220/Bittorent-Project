@@ -31,10 +31,7 @@ def update_settings(settings_obj, request):
 def return_torrent_file(request):
         torrent_name = request.form['torrent_name']
         piece_size = int(request.form['piece_size'])
-        if trackers:
-            trackers = request.form['trackers'].split('\n')
-        else:
-            trackers = None
+        trackers = request.form['trackers'].split('\n')
         comments = request.form['comments']
         filepath = request.form['file_path']
         # Process the form data as needed

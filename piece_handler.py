@@ -43,9 +43,6 @@ class PieceHandler:
         We will validate the piece against the current index
         """
 
-        with open('current_piece', 'wb') as f:
-            f.write(piece)
-
         for i, piece_hash in enumerate(self.torrent.pieces_info.pieces_hashes_list):
             sha1 = hashlib.sha1()
             sha1.update(piece)
@@ -57,6 +54,8 @@ class PieceHandler:
         return False
 
 
+
+
     def on_download_finish(self):
         self.multiple_files_from_pieces()
         # extra things to do if needed
@@ -64,10 +63,10 @@ class PieceHandler:
     def multiple_files_from_pieces(self):
         for file_obj in self.torrent.files:
             file_path = pathlib.Path(self.save_path) / file_obj.path_name
-            file_path.mkdir(exist_ok=True)
+            # file_path.mkdir(exist_ok=True)
             with open(file_path, 'wb') as f:
-                for i in range(file_obj.first_piece_index, file_obj.last_piece_index + 1):
-                    piece_path = os.path.join(self.torrent.file_path, str(i) + '.piece')
+                for i in range(file_obj.first_piece_index, file_obj.last_piece_index):
+                    piece_path = pathlib.Path(self.save_path) / 'Pieces' / (str(i) + '.piece')
                     with open(piece_path, 'rb') as piece_file:
                         f.write(piece_file.read())
 
