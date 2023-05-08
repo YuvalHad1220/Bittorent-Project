@@ -11,6 +11,7 @@ class PieceHandler:
         self.torrent = torrent
         self.save_path = torrent.download_path
         self.downloaded_pieces = bytearray([0]) * len(self.torrent.pieces_info.pieces_hashes_list)
+        self.get_existing_pieces()
 
     def get_existing_pieces(self):
         path = pathlib.Path(self.save_path)
@@ -26,7 +27,7 @@ class PieceHandler:
         """
         path = pathlib.Path(self.save_path)
         pieces_path = path / "pieces"
-        with open(pieces_path / f"{self.downloaded_pieces}.piece", 'wb') as f:
+        with open(pieces_path / f"{self.needed_piece_to_download_index()}.piece", 'wb') as f:
             f.write(validated_piece)
             self.downloaded_pieces[piece_index] = 1
 
@@ -45,21 +46,16 @@ class PieceHandler:
         with open('current_piece', 'wb') as f:
             f.write(piece)
 
-        for piece_hash in self.torrent.pieces_info.pieces_hashes_list:
-            # piece_hash = self.torrent.pieces_info.pieces_hashes_list[self.downloaded_pieces]
+        for i, piece_hash in enumerate(self.torrent.pieces_info.pieces_hashes_list):
             sha1 = hashlib.sha1()
             sha1.update(piece)
             res = sha1.digest()
             if res == piece_hash:
-                print("equals")
+                print("PIECE EXISTS IN HASH LIST!! GOOD JOB ON GETTING THAT. PIECE INDEX:", i)
                 return True
 
         return False
 
-        print(self.downloaded_pieces)
-        print(res)
-        print(piece_hash)
-        return res == piece_hash
 
     def on_download_finish(self):
         self.multiple_files_from_pieces()

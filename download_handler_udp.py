@@ -1,4 +1,6 @@
 import struct
+import sys
+
 from connection_handlers import trakcer_announce_handler
 from database.torrent_handler import TorrentHandler
 import asyncio
@@ -10,7 +12,7 @@ from typing import List
 import encryption
 
 settings = read_settings_file("./settings/settings.json")
-BLOCK_SIZE = 0x1000
+BLOCK_SIZE = 0xf000
 MAX_TIME_TO_WAIT = 0.1
 TYPES = {
     "REQUEST": 1,
@@ -20,6 +22,8 @@ TYPES = {
 }
 
 self_addr = ('192.168.1.41', settings.port)
+
+TO_ENCRYPT = False
 
 
 def parse_request(payload):
@@ -56,7 +60,7 @@ class connectableUDP:
         self.trans_id = trans_id
         self.conn_with_peer = conn
         self.peer_pub_key = peer_pub_key
-        print(f"{peer_addr} - {trans_id}")
+        print(f"{peer_addr} - {trans_id} - {peer_pub_key}")
 
 
 async def connect_to_peer(peer_addr, public_key=None):
@@ -70,7 +74,8 @@ async def connect_to_peer(peer_addr, public_key=None):
         if public_key:
             assert resp[1:] == public_key
         trans_id = resp[0]
-        return connectableUDP(peer_addr, conn_with_peer, trans_id)
+        return connectableUDP(peer_addr, conn_with_peer, trans_id, public_key)
+
 
     except TimeoutError:
         return None
@@ -98,7 +103,7 @@ class downloadHandlerUDP:
 
         self.current_piece_data = bytearray([0]) * self.torrent.pieces_info.piece_size_in_bytes
 
-        if settings.download_torrentx_encryption:
+        if TO_ENCRYPT:
             self.pub_key, self.private_key = encryption.create_key_pairs()
         else:
             self.pub_key, self.private_key = None, None
@@ -117,9 +122,33 @@ class downloadHandlerUDP:
                 continue
 
             if b'bittorrent' in msg:
-                print("got a new connection")
                 await self.on_peer_trying_to_connect(msg, addr)
-                print("added incoming connection to my connections")
+
+
+            else:
+                connectable = None
+                for conn in self.peer_connections:
+                    if conn.peer_addr[0] == addr[0]:
+                        connectable = conn
+                        break
+
+                # then maybe its a message from peer with msg_type
+                try:
+                    msg_length, trans_id, msg_type, piece_index, block_offset, block_length = parse_request(msg)
+                    if msg_type == 1:
+                        await self.on_block_request(connectable, addr, trans_id, piece_index, block_offset,
+                                                    block_length)
+
+                    if msg_type == 2:
+                        await self.on_block_receive(msg, piece_index, msg_length, block_offset, block_length)
+
+                    if msg_type == 3:
+                        # block does not exist, for now in current implementation we just pass
+                        pass
+
+
+                except:
+                    pass
 
             tasks = []
             for connection in self.peer_connections:
@@ -147,35 +176,31 @@ class downloadHandlerUDP:
                 msg = data[0]
                 addr = msg[1]
 
+
         except TimeoutError:
             msg = None
 
         if not msg:
             return None
 
-        msg_length, trans_id, msg_type, piece_index, block_offset, block_length = parse_request(msg)
+        msg_length, trans_id, msg_type, piece_index, block_offset, block_length = parse_request(msg[:20])
         if msg_type == 1:
             await self.on_block_request(connectable, addr, trans_id, piece_index, block_offset, block_length)
 
         if msg_type == 2:
-            await self.on_block_receive(msg, msg_length, block_offset, block_length)
+            await self.on_block_receive(msg, piece_index, msg_length, block_offset, block_length)
 
         if msg_type == 3:
             # block does not exist, for now in current implementation we just pass
             pass
 
     async def on_peer_trying_to_connect(self, msg, addr):
-        if addr[0] in [connection.peer_addr[0] for connection in self.peer_connections]:
-            return
-
         th = TorrentHandler("./database/torrent.db")
         trans_id = 1
         for torrent in th.get_torrents():
             addrs = [addr for addr, port in torrent.peers]
             if addr[0] in addrs:
                 trans_id += 1
-
-        print("decided trans id:", trans_id)
 
         resp = struct.pack('! b', trans_id)
 
@@ -184,15 +209,18 @@ class downloadHandlerUDP:
             resp += msg[10:]
             peer_pub_key = msg[10:]
 
-        peer_conn = await aioudp.open_remote_endpoint(*addr)
-        peer_conn.send(resp)
-        connectable = connectableUDP(addr, peer_conn, trans_id, peer_pub_key)
+        self.conn_as_server.send(resp, addr)
+        connectable = connectableUDP(addr, self.conn_as_server, trans_id, peer_pub_key)
         self.peer_connections.append(connectable)
 
     async def on_block_request(self, connectable, addr, trans_id, piece_index, block_offset, block_length):
-        data = self.piece_handler.return_block(piece_index, block_offset, block_length, connectable.peer_pub_key)
+        if connectable.peer_pub_key:
+            data = self.piece_handler.return_block(piece_index, block_offset, encryption.MSG_SIZE_REQUEST_BYTES,
+                                                   connectable.peer_pub_key)
+        else:
+            data = self.piece_handler.return_block(piece_index, block_offset, block_length, connectable.peer_pub_key)
         block_len = len(data)
-        print(f"data being sent: {data}")
+        # print(f"data being sent: {data}")
         data = create_block_msg(data, trans_id, piece_index, block_offset, block_len)
         if type(connectable.conn_with_peer) == aioudp.RemoteEndpoint:
             connectable.conn_with_peer.send(data)
@@ -200,23 +228,28 @@ class downloadHandlerUDP:
             connectable.conn_with_peer.send(data, addr)
         print(f"sent to peer data, piece index: {piece_index}, block offset: {block_offset}, block length: {block_len}")
 
-    async def on_block_receive(self, msg, length, block_offset, block_length):
+    async def on_block_receive(self, msg, piece_index, length, block_offset, block_length):
         data = msg[20: length + 1]
         if self.pub_key:
             data = encryption.decrypt_using_private(data, self.private_key)
             block_length = len(data)
 
-        print(f"block is: {data}")
         for i in range(block_length):
-            self.current_piece_data[i + block_offset] = data[i]
+            if block_offset + i >= len(self.current_piece_data):
+                print("finish downloading piece")
+                if self.piece_handler.validate_piece(self.current_piece_data):
+                    self.piece_handler.on_validated_piece(self.current_piece_data, piece_index)
+                    self.piece_index = self.piece_handler.needed_piece_to_download_index()
+                    self.block_offset = 0
 
-        if block_offset + 1 >= len(self.current_piece_data):
-            self.piece_handler.on_validated_piece(self.current_piece_data)
-            self.piece_index = self.piece_handler.needed_piece_to_download_index()
-            self.block_offset = 0
+                else:
+                    self.block_offset = 0
 
-        else:
-            self.block_offset += block_length
+            else:
+                self.current_piece_data[i + block_offset] = data[i]
+
+        self.block_offset += block_length
+        print(f"got from peer data", block_offset / len(self.current_piece_data) * 100)
 
     def request_block(self):
         # that function requests a block from all peers
