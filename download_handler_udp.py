@@ -188,7 +188,7 @@ class downloadHandlerUDP:
 
     async def on_block_receive(self, msg, length, block_offset, block_length):
         data = msg[20: length + 1]
-        if self.public_key:
+        if self.pub_key:
             data = encryption.decrypt_using_private(data, self.private_key)
             block_length = len(data)
 
@@ -215,7 +215,11 @@ class downloadHandlerUDP:
 torrent_handler = TorrentHandler("./database/torrent.db")
 settings = read_settings_file("./settings/settings.json")
 
-torrent1 = torrent_handler.get_torrents()[0]
+torrent1 = None
+for torrent in torrent_handler.get_torrents():
+    if torrent.is_torrentx:
+        torrent1 = torrent
+        break
 
 udp = downloadHandlerUDP(torrent1, settings)
 asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))

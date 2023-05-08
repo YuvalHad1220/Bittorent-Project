@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 import math
 from typing import List
 from bencoding import decode, encode
-from utils import pieces_list_from_bytes
 from utils import torrent_types as types
 import hashlib
 

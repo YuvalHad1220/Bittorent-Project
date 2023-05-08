@@ -1,0 +1,20 @@
+@startuml
+!include AnnounceLog.puml
+!include AnnounceTest.puml
+!include announceUDP.puml
+!include TrackerApp.puml
+!include TrackerUsers.puml
+!include loghandler.puml
+!include dctodb.puml
+
+left to right direction
+
+app -> Users
+app -> LogHandler
+LogHandler -> dctodb
+app -> announceUDP
+LogHandler -> TorrentLog
+Users -> AnnounceTest
+
+
+@enduml

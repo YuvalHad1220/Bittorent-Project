@@ -12,16 +12,11 @@ FAILURE = {"success": False}
 
 torrent_handler = TorrentHandler("./database/torrent.db")
 settings = read_settings_file("./settings/settings.json")
-request_handler = main_loop(settings, torrent_handler)
-thread_handler = ThreadHandler(threading.current_thread(), request_handler)
+announce_handler = main_loop(settings, torrent_handler)
+thread_handler = ThreadHandler(threading.current_thread(), None, announce_handler, None, None) # None is the udp tcp threads
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "df0331cefc6c2b9a5d0208a726a5d1c0fd37324feba25506"
 thread_handler.start_threads()
-
-
-@app.route("/stats", methods=["GET"])
-def resource_usage():
-    return render_template("resource-usage-page.html")
 
 
 @app.route("/edit_settings", methods=["GET", "POST"])

@@ -1,0 +1,16 @@
+@startuml
+class Settings {
+- path: str
+- default_download_path: str
+- default_file_archive_path: str
+- download_torrentx_encryption: bool
+- user_agent: str = "-qB4450-"
+- random_id: str = rand_str(12)
+- peer_id: str = "qBittorrent/4.4.5"
+- port: int = 25565
+- size_calc: str = "SI"
++ asdict(): dict
+- update(): None
++ update_settings(**kwargs): None
+}
+@enduml

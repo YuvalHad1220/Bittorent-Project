@@ -1,0 +1,10 @@
+@startuml
+class announceUDP {
+    +parse_announce_struct(payload: bytes) -> Dict[str, Union[str, int]]
+    +on_msg(payload: bytes, addr: Tuple[str, int]) -> None
+    +construct_response(trans_id: bytes, torrent: TorrentLog, announcer_torrent_addr: Tuple[str, int]) -> bytes
+    +random_bytes(length: int) -> bytes
+    +validate_conn_request(payload: bytes) -> None
+    +main() -> None
+}
+@enduml

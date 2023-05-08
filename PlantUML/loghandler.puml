@@ -1,0 +1,13 @@
+@startuml
+class LogHandler {
+- torrent_db: dctodb
+- torrent_list: List[TorrentLog]
+
+
++ init(db_filename: str)
++ add_torrent_log(torrent_log: TorrentLog): bool
++ update_torrent_log(torrent_log: TorrentLog): bool
+}
+
+
+@enduml

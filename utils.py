@@ -178,19 +178,7 @@ def create_torrent_file_from_single_file(piece_size, root_path, torrent_name, co
 
     return response
 
-def file_to_pieces(file_directory, pieces_directory):
-    """
-    Helper function to help us convert file into pieces. hoping the logic behind it will help understand converting pieces into files
-    """
-    pass
 
-# create_torrent_file_from_single_file(16384, r"C:\Users\Yuval
-# Hadar\Desktop\Bittorent-My_Project\tests\test.torrent", "test.torrent")
-# create_torrent_file_from_directory(16, r"C:\Users\Yuval Hadar\Desktop\mcserver", "")
-
-
-# since aiohttp doesnt support sending sha-1 hashes, we encode it properly ourselves
-# we return the params and the headers as just headers
 def encode_params_with_url(params_dict, url):
     params = urllib.parse.urlencode(params_dict)
     params = params.replace("%25", "%")
@@ -265,12 +253,6 @@ def return_path(filename):
     if not path.exists():
         path.mkdir()
     return path
-
-
-def pieces_list_from_bytes(pieces_bytes: bytes):
-    piece_size = 20  # each SHA-1 hash is 20 bytes
-    pieces = [pieces_bytes[i:i + piece_size] for i in range(0, len(pieces_bytes), piece_size)]
-    return pieces
 
 
 def return_piece_size(file_size):

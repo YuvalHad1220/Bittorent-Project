@@ -1,0 +1,28 @@
+@startuml
+!include AnnounceHandler.puml
+!include App.puml
+!include dctodb.puml
+!include DownloaderAndPieceHandlerTCP.puml
+!include DownloadHandlerUDP.puml
+!include Encryption.puml
+!include PieceHandler.puml
+!include ThreadHandlerUML.puml
+!include TorrentHandler.puml
+!include utils.puml
+!include Torrent.puml
+!include Settings.puml
+
+left to right direction
+
+App -> TorrentHandler
+ThreadHandler -> downloadHandlerTCP
+ThreadHandler -> downloadHandlerUDP
+downloadHandlerUDP -> Encryption
+ThreadHandler -> AnnounceHandler
+downloadHandlerTCP -> PieceHandler
+downloadHandlerUDP -> PieceHandler
+App -> Settings
+App -> ThreadHandler
+App -> UtilityFunctions
+
+@enduml

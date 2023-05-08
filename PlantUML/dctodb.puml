@@ -1,0 +1,40 @@
+
+@startuml
+
+class dctodb {
++ _create_connection(db_filename)
++ sql_represent(name, type) -> str
++ _split_fields(dc) -> Tuple[List[Any]]
+-dc: Type[Any]
+-db_filename: str
+-extra_columns: Dict[str, Any]
+-identifier: str
+-table_name: str
+-basic_fields: List[Any]
+-dc_fields: List[Any]
+-list_fields: List[Any]
+-dc_in_class_mappings: dict
+-lists_in_class_mappings: dict
+-conn: sqlite3.Connection
+
++__init__(dc: Type[Any], db_filename: str, extra_columns: Dict[str, Any] = dict())
++create_table()
++_init_sub_class_connections()
++_execute(command, args=None)
++_get_count() -> int
++_insert_list(instance)
++_insert_dcs(instance)
++insert_many(*instances)
++insert_one(instance, extra_columns: Dict[str, Any] = dict())
++_fetch_lists_from_subtable(index)
++fetch_all() -> List[Tuple[Any, Union[Dict, None]]]
++fetch_where(condition) -> List[Tuple[Any, Union[Dict, None]]]
++_build_item_from_values(index, basic_args, child_dc_values: Dict, child_list_values: Dict)
++_fetch_dcs_from_sub_table(self_index) -> Dict
++update(obj)
++delete(obj)
+}
+
+
+
+@enduml

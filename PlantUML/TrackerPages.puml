@@ -1,0 +1,9 @@
+@startuml
+title bitTorrentX Tracker
+
+[*] --> Homepage
+Homepage --> Upload_Torrent
+Homepage --> Show_Torrents
+Homepage --> Show_Users
+
+@enduml

@@ -1,0 +1,22 @@
+@startuml
+
+class AnnounceHandler{
+
++ split_torrent_list(torrent_list: List[Torrent])
++ udp_loop(udp_torrents_list, settings: Settings)
++ http_loop(http_torrents_list: List[Torrent], settings: Settings)
++ main_loop(settings, torrent_handler)
++ announce_http_legacy(torrent: Torrent, event: str, settings: Settings)
++ build_announce_struct(torrent: Torrent, event: str, settings: Settings, conn_id, trans_id)
++ parse_announce_resp_struct(message)
++ build_conn_struct(settings: Settings)
++ vaildated_conn_id(message)
++ init_conn(message, addr)
++ announce_udp_legacy(torrent: Torrent, event: str, settings: Settings)
++ construct_torrentx_announce_msg(torrents: List[Tuple[Torrent, event]], settings: Settings)
++ announce_udp_torrentx(torrents_of_same_tracker: List[Tuple[Torrent, event]], settings: Settings)
++ parse_announce_resp_struct_torrentx(message)
+}
+
+
+@enduml

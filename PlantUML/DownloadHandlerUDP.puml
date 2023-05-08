@@ -1,0 +1,36 @@
+@startuml
+
+class downloadHandlerUDP {
+    -torrent: Torrent
+    -piece_handler: PieceHandler
+    -block_offset: int
+    -piece_index: int
+    -downloading: bool
+    -uploading: bool
+    -peer_connections: List[connectableUDP]
+    -conn_as_server: None
+    -current_piece_data: bytearray
+    -pub_key: str
+    -private_key: str
+    +main_loop()
+    +gather_connectables()
+    +listen_for_msg(connectable: connectableUDP)
+    +on_peer_trying_to_connect(msg, addr)
+    +on_block_request(connectable, addr, trans_id, piece_index, block_offset, block_length)
+    +on_block_receive(msg, length, block_offset, block_length)
+    +request_block()
+}
+
+class connectableUDP {
+    -peer_addr: tuple
+    -trans_id: int
+    -conn_with_peer: socket.socket
+    -peer_pub_key: str
+    +init(peer_addr: tuple, conn: socket.socket, trans_id: int, peer_pub_key: str = None)
+}
+
+
+
+connectableUDP -> downloadHandlerUDP : connections
+
+@enduml

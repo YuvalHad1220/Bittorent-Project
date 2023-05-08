@@ -1,0 +1,11 @@
+@startuml
+class AnnounceTest {
+    - torrent: TorrentLog
+    + init(torrent: TorrentLog, seeders_threshold, leechers_threshold)
+    + downloadChangeTooFast()
+    + uploadChangeTooFast()
+    + uploadToNoOne()
+    + downloadFromoNoOne()
+}
+
+@enduml

@@ -1,0 +1,8 @@
+@startuml
+class Encryption {
++create_key_pairs(): Tuple[bytes, bytes]
++encrypt_using_public(msg_in_bytes: bytes, public_pem: bytes) -> bytes
++decrypt_using_private(cipher: bytes, private_pem: bytes) -> bytes
+}
+
+@enduml

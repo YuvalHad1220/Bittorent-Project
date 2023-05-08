@@ -1,0 +1,16 @@
+@startuml
+class TorrentHandler {
+    -torrent_db: dctodb
+    -torrent_list: list[Torrent]
+
+    +__init__(db_filename: str)
+    +add_torrent(torrent_obj: Torrent): bool
+    +delete_torrent(torrent_obj: Torrent): bool
+    +get_torrents(): list[Torrent]
+    +update_torrents(): bool
+}
+
+TorrentHandler -> dctodb
+TorrentHandler --> Torrent
+
+@enduml

@@ -1,0 +1,54 @@
+@startuml
+
+class TorrentConnectionInfo {
+    - announce_url: str
+    - state: str
+    - time_to_announce: int = 0
+    - seeders: int = 0
+    - connected_seeders: int = 0
+    - leechers: int = 0
+    - connected_leechers: int = 0
+    - index: int = 0
+    + tracker_type()
+}
+
+class Pieces {
+    - piece_size_in_bytes: int
+    - pieces_hashes: bytes
+    - index: int = 0
+    + pieces_hashes_list()
+}
+
+class File {
+    - path_name: str
+    - size_in_bytes: int
+    - first_piece_index: int = 0
+    - last_piece_index: int = 0
+    - index: int = 0
+}
+
+class Torrent {
+    - name: str
+    - info_hash: bytes
+    - file_path: str
+    - download_path: str
+    - auto_decrypt: bool
+    - metadata: bytes
+    - is_torrentx: bool
+    - pieces_info: Pieces
+    - connection_info: TorrentConnectionInfo
+    - files: List[File]
+    - peers: List[Tuple[String, int]] = list()
+    - downloaded: int = 0
+    - uploaded: int = 0
+    - index: int = 0
+    + size()
+    + progress()
+    + asdict()
+}
+
+Torrent --> TorrentConnectionInfo
+Torrent --> Pieces
+Torrent --> File
+
+@enduml

@@ -1,0 +1,11 @@
+@startuml
+class ThreadHandler {
+- app_thread: Thread
+- io_thread: Thread
+- announcement_thread
+- tcp_thread
+- udp_thread
++ init(app_thread: Thread, io_thread: Thread, announcement_thread, tcp_thread, udp_thread)
++ start_threads()
+}
+@enduml

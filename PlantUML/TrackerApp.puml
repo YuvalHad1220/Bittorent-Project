@@ -1,0 +1,12 @@
+@startuml
+class app {
+    +format_size(size_in_bytes: int) -> str
+    +filter_last_entry_by_peer_ip(announce_log_list: List[AnnounceLog]) -> List[AnnounceLog]
+    +get_leechers_count(torrent: TorrentLog) -> int
+    +get_seeders_count(torrent: TorrentLog) -> int
+    +upload_torrent() -> None
+    +show_torrents() -> None
+    +show_users() -> None
+    +download_requested_torrent(torrent_name: str) -> None
+}
+@enduml

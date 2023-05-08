@@ -1,0 +1,11 @@
+@startuml
+title bitTorrentX Client
+
+[*] --> Homepage
+Homepage --> settings
+Homepage --> create_Torrent_X
+Homepage --> Add_Torrent
+create_Torrent_X --> Homepage
+Add_Torrent --> Homepage
+
+@enduml

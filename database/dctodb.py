@@ -25,7 +25,6 @@ def _split_fields(dc) -> Tuple[List[Any]]:
 
     return basic_fields, dc_fields, list_fields
 
-
 def _sql_represent(name, type) -> str:
     match type:
         case builtins.int:
@@ -51,13 +50,42 @@ def _sql_represent(name, type) -> str:
 
 
 class dctodb:
-    """
-    helper class to store lists
-    """
+
     def _create_class(self, field, item_type: Type):
+        """
+        helper class to store lists
+        """
         cls_name = self.dc.__name__ + field.name.capitalize() + "List"
         return make_dataclass(cls_name,
-                          [(self.identifier, str), ('item_val', item_type),('index',int,0)])
+                              [(self.identifier, str), ('item_val', item_type), ('index', int, 0)])
+
+
+    def _init_sub_class_connections(self):
+        """
+        Essentially, Before we create our self table,
+        we need to create sub-tables to every complicated object we need to store, like sub-dataclasses and lists.
+        That connection is creating connection to our sub-dataclasses when inserting them to the DB.
+        however we create extra columns that are not part of the object but rather an identifier to their parent class
+          - so we could "reach" the parent class in the database
+        """
+        for dc_in_class in self.dc_fields:
+            self.dc_in_class_mappings[dc_in_class] = dctodb(dc_in_class.type, self.db_filename, {self.identifier: int})
+
+        for list_in_class in self.list_fields:
+            custom_class = self._create_class(list_in_class, get_args(list_in_class.type)[0])
+            self.lists_in_class_mappings[list_in_class] = dctodb(custom_class, self.db_filename)
+
+
+    def create_table(self):
+        command = "CREATE TABLE IF NOT EXISTS {} (id integer PRIMARY KEY AUTOINCREMENT, {});"
+        # might remove index from basic_fields but unsure
+        args = [_sql_represent(field.name, field.type) for field in self.basic_fields if field.name != 'index'] + [
+            _sql_represent(col_name, col_type) for col_name, col_type in self.extra_columns.items()]
+        args = ', '.join(args)
+        command = command.format(self.table_name, args)
+        _ = self._execute(command)
+        self.conn.close()
+        self.conn = None
 
 
     def __init__(self, dc: Type[Any], db_filename: str, extra_columns: Dict[str, Any] = dict()):
@@ -74,8 +102,13 @@ class dctodb:
         self._init_sub_class_connections()
         self.create_table()
 
+
+
+
+        
+
     def _execute(self, command, args=None):
-        if not self.conn: 
+        if not self.conn:
             self.conn = _create_connection(self.db_filename)
         cur = self.conn.cursor()
         if args:
@@ -85,16 +118,6 @@ class dctodb:
 
         return res
 
-    def create_table(self):
-        command = "CREATE TABLE IF NOT EXISTS {} (id integer PRIMARY KEY AUTOINCREMENT, {});"
-        # might remove index from basic_fields but unsure
-        args = [_sql_represent(field.name, field.type) for field in self.basic_fields if field.name != 'index'] + [
-            _sql_represent(col_name, col_type) for col_name, col_type in self.extra_columns.items()]
-        args = ', '.join(args)
-        command = command.format(self.table_name, args)
-        _ = self._execute(command)
-        self.conn.close()
-        self.conn = None
 
     def _get_count(self) -> int:
         res = self._execute(f"SELECT COUNT(*) FROM {self.dc.__name__}")
@@ -103,17 +126,7 @@ class dctodb:
         self.conn = None
         return res
 
-    def _init_sub_class_connections(self):
-        """
-        Essentially, Before we insert self, we need to create sub-connections to every complicated object we need to store, like sub-dataclasses and lists.
-        That connection is creating connection to our sub-dataclasses, however we create extra columns that are not part of the object but rather an identifier to their parent class
-        """
-        for dc_in_class in self.dc_fields:
-            self.dc_in_class_mappings[dc_in_class] = dctodb(dc_in_class.type, self.db_filename, {self.identifier: int})
-        
-        for list_in_class in self.list_fields:
-            custom_class = self._create_class(list_in_class, get_args(list_in_class.type)[0])
-            self.lists_in_class_mappings[list_in_class] = dctodb(custom_class, self.db_filename)
+
 
     def _insert_list(self, instance):
         for list_field in self.list_fields:
@@ -121,8 +134,6 @@ class dctodb:
             for item in list_of_items:
                 item_as_obj = self.lists_in_class_mappings[list_field].dc(instance.index, item)
                 self.lists_in_class_mappings[list_field].insert_one(item_as_obj)
-
-
 
     def _insert_dcs(self, instance):
         for field in self.dc_fields:
@@ -143,7 +154,7 @@ class dctodb:
         Extra columns is a dict: {col_name: col_value}
         After we updated our own index, we can proceed to enter fields like dcs and lists
         """
-        
+
         command = "INSERT INTO {} ({}) VALUES ({});"
         # Remember, we will need to handle dataclasses and lists seperatley so we exclude them from now
         variable_names = [field.name for field in self.basic_fields if field.name != "index"]
@@ -154,7 +165,7 @@ class dctodb:
 
         command = command.format(self.table_name, ', '.join(variable_names), ','.join(['?'] * len(variable_names)))
 
-        _= self._execute(command, variable_values)
+        _ = self._execute(command, variable_values)
         res = self.conn.commit()
         instance.index = self._get_count()
 
@@ -206,6 +217,9 @@ class dctodb:
             fetched.append(item)
 
         return fetched
+    
+
+    
 
     def fetch_where(self, condition) -> List[Tuple[Any, Union[Dict, None]]]:
         """
@@ -224,7 +238,7 @@ class dctodb:
         command = command.format(self.table_name, condition)
         res = self._execute(command)
         rows = res.fetchall()
-        
+
         self.conn.close()
         self.conn = None
 

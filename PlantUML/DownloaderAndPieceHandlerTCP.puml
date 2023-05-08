@@ -1,0 +1,31 @@
+@startuml
+
+class ConnectedPeer {
+    - torrent: Torrent
+    - settings: Settings
+    - sock: socket.socket
+    - peer_bitfield: None
+    - choked: True
+    - interested: False
+    - download_handler: downloadHandlerTCP
+    - to_send: List[bytes]
+    + run()
+}
+
+class downloadHandlerTCP {
+    - torrent: Torrent
+    - settings: Settings
+    - connections: List[ConnectedPeer]
+    - current_piece_data: bytearray
+    - ph: PieceHandler
+    + download_block(needed_piece: int, block_offset: int, block_size: int)
+    + run()
+    + on_block(msg_len: int, payload: bytes)
+    + gatherConnectables()
+    + startConnectables()
+}
+
+ConnectedPeer -> downloadHandlerTCP : connections
+ConnectedPeer <- downloadHandlerTCP : download_handler
+
+@enduml

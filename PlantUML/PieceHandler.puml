@@ -1,0 +1,18 @@
+@startuml
+class PieceHandler {
+-torrent: Torrent
+-save_path: str
+-downloaded_pieces: bytearray
++init(self, torrent: Torrent)
++update_existing_pieces(self)
++on_validated_piece(self, validated_piece: bytes, piece_index: int) -> bool
++needed_piece_to_download_index(self) -> int
++validate_piece(self, piece: bytes, piece_index: int) -> bool
++on_download_finish(self)
++multiple_files_from_pieces(self)
++one_file_from_pieces(self)
++return_block(self, piece_index: int, block_offset: int, block_length: int, public_key: bytes = None) -> bytes
+}
+
+
+@enduml

@@ -1,0 +1,31 @@
+@startuml
+class AnnounceLog {
+    log_time: datetime.datetime
+    peer_ip: str
+    port: int
+    event: str
+    downloaded: int
+    uploaded: int
+    seeders: int = -1
+    leechers: int = -1
+    index: int = 0
+}
+
+class TorrentLog {
+- bencoded_info: bytes
+- torrent_name: str
+- announcements_logs: List[AnnounceLog]
+- index: int
++ info_hash(): bytes
++ size(): int
++ is_torrentx(): bool
++ repack(new_announce_url)
++ add_announcement(announcement: AnnounceLog)
++ get_announcement_peers(): dict
++ get_peers(): set
+}
+TorrentLog <-- AnnounceLog : announcements_logs
+
+
+
+@enduml

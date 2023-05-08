@@ -1,0 +1,20 @@
+@startuml
+
+class User {
+-addr
+-torrents_in_share
++init(addr)
++add_torrent(torrent_name)
+}
+
+class Users {
+-log_handler
++init(log_handler)
++build_user_list_from_torrents()
++users_test()
+}
+
+
+Users --> User
+
+@enduml

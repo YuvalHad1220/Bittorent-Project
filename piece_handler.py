@@ -27,7 +27,6 @@ class PieceHandler:
         pieces_path = path / "pieces"
         with open(pieces_path / f"{self.downloaded_pieces}.piece",'wb') as f:
             f.write(validated_piece)
-
             self.downloaded_pieces[piece_index] = 1
 
     def needed_piece_to_download_index(self):

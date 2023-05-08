@@ -1,0 +1,16 @@
+@startuml
+
+class App {
+- torrent_handler
+- settings_handler
+- thread_handler
+
++ edit_settings()
++ get_available_clients()
++ ret_torrent_list()
++ create_torrentx()
++ add_torrent()
++ homepage()
+}
+
+@enduml

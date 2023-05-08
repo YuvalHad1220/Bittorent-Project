@@ -1,0 +1,22 @@
+@startuml
+
+class UtilityFunctions {
+    + print_bytes_as_bits()
+    + create_torrent_file_from_directory(piece_size, root_path, torrent_name, comments=None, trackers=None)
+    + create_torrent_file_from_single_file(piece_size, root_path, torrent_name, comments=None, trackers=None)
+    + encode_params_with_url(params_dict, url)
+    + fetch_versions()
+    + as_peer_id_user_agent()
+    + rand_str(length)
+    + get_home_directory()
+    + get_cwd_directory()
+    + load_file(filename, _type)
+    + write_to_file(filename, _type, content)
+    + return_path(filename)
+    + return_piece_size(file_size)
+    + get_client_list(reload=False)
+}
+
+@enduml
+
+

@@ -281,17 +281,8 @@ async def announce_udp_legacy(torrent: Torrent, event: str, settings: Settings):
 
     logging.info(f"updated torrent {torrent.name} connection info")
 
-# async def announce_start_udp(*instances):
-#     pass
+async def construct_torrentx_handshake():
+    pass
+async def announce_udp_torrentx(torrents_of_same_tracker: List[Torrent], ):
+    pass
 
-# async def announce_resume_http(aiohttp_client,*instances):
-#     pass
-
-# async def announce_resume_udp(*instances):
-#     pass
-
-# async def announce_finish_http(aiohttp_client,*instances):
-#     pass
-
-# async def announce_finish_udp(*instances):
-#     pass
