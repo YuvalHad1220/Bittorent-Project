@@ -3,7 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="01a8ddf7-68fc-4aa3-9894-946d371b76b0" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/download_handler_udp.py" beforeDir="false" afterPath="$PROJECT_DIR$/download_handler_udp.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/torrent.db" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/download_handler_tcp.py" beforeDir="false" afterPath="$PROJECT_DIR$/download_handler_tcp.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/piece_handler.py" beforeDir="false" afterPath="$PROJECT_DIR$/piece_handler.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -47,7 +48,7 @@
       <recent name="C:\Users\Yuval Hadar\Desktop\Bittorent-My_Project" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.download_handler_udp">
+  <component name="RunManager" selected="Python.download_handler_tcp">
     <configuration name="app" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Bittorent-My_Project" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -113,9 +114,9 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.download_handler_udp" />
-        <item itemvalue="Python.app" />
         <item itemvalue="Python.download_handler_tcp" />
+        <item itemvalue="Python.app" />
+        <item itemvalue="Python.download_handler_udp" />
       </list>
     </recent_temporary>
   </component>

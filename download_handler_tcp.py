@@ -47,24 +47,47 @@ class downloadHandlerTCP:
         msg_type, piece_index, block_offset = struct.unpack('! b i i', payload[:9])
         block_length = msg_len - 9
         block = payload[9:]
+        #
+        # for i in range(block_length):
+        #     try:
+        #         if i < len(block):
+        #             self.current_piece_data[i + block_offset] = block[i]
+        #         else:
+        #             self.current_piece_data[i + block_offset] = 0
+        #     except Exception as e:
+        #         break
+        #
+        # next_offset = block_offset + block_length
+        # if next_offset >= self.torrent.pieces_info.piece_size_in_bytes:
+        #     print("got whole piece")
+        #     self.ph.on_validated_piece(self.current_piece_data, piece_index)
+        #     next_offset = 0
+        # else:
+        #     print("progress on piece:", block_offset /self.torrent.pieces_info.piece_size_in_bytes * 100)
+
+        # if block_length == 0:
+        #     return self.on_piece(piece_index, self.block_offset)
 
         for i in range(block_length):
-            try:
-                if i < len(block):
+            if block_offset + i >= len(self.current_piece_data):
+                # when we downloaded all piece
+                print(f"think we downloaded")
+                return self.on_piece(piece_index, block_offset + i)
+            else:
+                try:
                     self.current_piece_data[i + block_offset] = block[i]
-                else:
-                    self.current_piece_data[i + block_offset] = 0
-            except Exception as e:
-                break
+                except Exception as e:
+                    pass
+        print(f"got from peer data", 100 * block_offset / (len(self.current_piece_data) + 1))
 
-        next_offset = block_offset + block_length
-        if next_offset >= self.torrent.pieces_info.piece_size_in_bytes:
-            print("got whole piece")
+        self.on_piece(piece_index, block_offset + block_length)
+        self.download_block(self.ph.needed_piece_to_download_index(), block_offset + block_length, BLOCK_SIZE)
+
+    def on_piece(self, piece_index, offset):
+        print("not validated")
+        if self.ph.validate_piece(self.current_piece_data[:offset]):
+            print("validated now")
             self.ph.on_validated_piece(self.current_piece_data, piece_index)
-            next_offset = 0
-        else:
-            print("progress on piece:", block_offset /self.torrent.pieces_info.piece_size_in_bytes * 100)
-        self.download_block(self.ph.needed_piece_to_download_index(), next_offset, BLOCK_SIZE)
 
     def gatherConnectables(self):
         import random

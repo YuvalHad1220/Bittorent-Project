@@ -1,7 +1,6 @@
 from torrent import Torrent
 import pathlib
 import hashlib
-import os
 import encryption
 
 
@@ -28,6 +27,8 @@ class PieceHandler:
         with open(self.save_path / f"{self.needed_piece_to_download_index()}.piece", 'wb') as f:
             f.write(validated_piece)
             self.downloaded_pieces[piece_index] = 1
+
+        self.torrent.downloaded += self.torrent.pieces_info.piece_size_in_bytes
 
     def needed_piece_to_download_index(self):
         for i, piece_downloaded_value in enumerate(self.downloaded_pieces):
