@@ -159,6 +159,9 @@ class downloadHandlerTCP:
         print("started connection as server")
         self.peer_connections = await self.gather_connectables()
         self.current_peer = self.get_next_peer()
+
+        self.pending = False
+
         while True:
 
             # tasks = []
@@ -169,12 +172,15 @@ class downloadHandlerTCP:
 
             await self.handle_msg(self.current_peer)
 
-            await self.request_block(self.piece_handler.needed_piece_to_download_index(), self.block_offset)
+            if not self.pending:
+                await self.request_block(self.piece_handler.needed_piece_to_download_index(), self.block_offset)
+                self.pending = True
 
             await asyncio.sleep(MAX_TIME_TO_WAIT)
 
             print(
                 f"PROGRESS IN PIECE: {round(100 * self.block_offset / self.torrent.pieces_info.piece_size_in_bytes, 2)}")
+            print(self.block_offset, self.torrent.pieces_info.piece_size_in_bytes)
 
     async def request_block(self, piece_index, block_offset):
         writer = self.current_peer.peer_writer
@@ -234,7 +240,11 @@ class downloadHandlerTCP:
 
             tasks.append(self.make_handshake(peer_addr))
         res = await asyncio.gather(*tasks)
-        return [item for item in res if item is not None]
+        to_ret = [item for item in res if item is not None]
+
+        import random
+        random.shuffle(to_ret)
+        return to_ret
 
     def on_block(self, msg_len, payload):
         msg_type, piece_index, block_offset = struct.unpack('! b i i', payload[:9])
@@ -244,24 +254,27 @@ class downloadHandlerTCP:
         print(
             f"piece index {piece_index}    block offset {block_offset}    block length recv {block_length}    block actual length {len(block)}")
 
-        self.write_data_to_block(block_length, block)
+        self.write_data_to_block(block_offset, block_length, block)
 
         self.block_offset = block_offset + len(block)
+
+        self.pending = False
 
     def get_next_peer(self):
         return self.peer_connections.pop()
 
-    def write_data_to_block(self, block_length, block):
+    def write_data_to_block(self, block_offset, block_length, block):
         for i in range(block_length):
-            if self.block_offset + i >= len(self.current_piece_data):
+            if block_offset + i >= len(self.current_piece_data):
                 # when we downloaded all piece
                 print(f"think we downloaded")
                 with open("current_piece", 'wb') as f:
                     f.write(self.current_piece_data)
                 if self.piece_handler.validate_piece(self.current_piece_data):
+                    print("piece hash validated")
                     sys.exit(1)
                 else:
-                    self.current_peer = self.get_next_peer()
+                    print("piece not validated")
                     self.block_offset = 0
             else:
                 if i < len(block):
@@ -269,6 +282,16 @@ class downloadHandlerTCP:
                 else:
                     self.current_piece_data[i + self.block_offset] = 0
 
+        if self.block_offset + block_length == self.torrent.pieces_info.piece_size_in_bytes:
+            print(f"think we downloaded")
+            with open("current_piece", 'wb') as f:
+                f.write(self.current_piece_data)
+            if self.piece_handler.validate_piece(self.current_piece_data):
+                print("piece hash validated")
+                self.piece_handler.on_validated_piece(self.current_piece_data, self.piece_handler.needed_piece_to_download_index())
+            else:
+                print("piece not validated")
+            sys.exit(1)
 
 torrent_handler = TorrentHandler("./database/torrent.db")
 
