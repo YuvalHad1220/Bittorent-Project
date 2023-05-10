@@ -50,6 +50,7 @@ class PieceHandler:
                 print("PIECE EXISTS IN HASH LIST!! GOOD JOB ON GETTING THAT. PIECE INDEX:", i)
                 return True
 
+        print("piece does not exist")
         return False
 
     def on_download_finish(self):

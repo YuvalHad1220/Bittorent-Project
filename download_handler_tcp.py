@@ -1,4 +1,6 @@
 import struct
+import sys
+
 from connection_handlers.peer_handler import ConnectedPeer, make_handshake, Request
 from database.torrent_handler import TorrentHandler
 from connection_handlers.trakcer_announce_handler import main_loop
@@ -47,6 +49,12 @@ class downloadHandlerTCP:
         msg_type, piece_index, block_offset = struct.unpack('! b i i', payload[:9])
         block_length = msg_len - 9
         block = payload[9:]
+
+
+        print(f"piece index {piece_index}    block offset {block_offset}    block length recv {block_length}    block actual length {len(block)}")
+
+        self.download_block(self.ph.needed_piece_to_download_index(), block_offset + block_length, BLOCK_SIZE)
+
         #
         # for i in range(block_length):
         #     try:
@@ -67,21 +75,20 @@ class downloadHandlerTCP:
 
         # if block_length == 0:
         #     return self.on_piece(piece_index, self.block_offset)
-
-        for i in range(block_length):
-            if block_offset + i >= len(self.current_piece_data):
-                # when we downloaded all piece
-                print(f"think we downloaded")
-                return self.on_piece(piece_index, block_offset + i)
-            else:
-                try:
-                    self.current_piece_data[i + block_offset] = block[i]
-                except Exception as e:
-                    pass
-        print(f"got from peer data", 100 * block_offset / (len(self.current_piece_data) + 1))
-
-        self.on_piece(piece_index, block_offset + block_length)
-        self.download_block(self.ph.needed_piece_to_download_index(), block_offset + block_length, BLOCK_SIZE)
+        #
+        # for i in range(block_length):
+        #     if block_offset + i >= len(self.current_piece_data):
+        #         # when we downloaded all piece
+        #         print(f"think we downloaded")
+        #         return self.on_piece(piece_index, block_offset + i)
+        #     else:
+        #         try:
+        #             self.current_piece_data[i + block_offset] = block[i]
+        #         except Exception as e:
+        #             pass
+        # print(f"got from peer data", 100 * block_offset / (len(self.current_piece_data) + 1))
+        #
+        # self.on_piece(piece_index, block_offset + block_length)
 
     def on_piece(self, piece_index, offset):
         print("not validated")
@@ -90,17 +97,15 @@ class downloadHandlerTCP:
             self.ph.on_validated_piece(self.current_piece_data, piece_index)
 
     def gatherConnectables(self):
-        import random
-        random.shuffle(torrent1.peers)
         for peer in torrent1.peers:
             res = make_handshake(torrent1, settings, peer)
             if res:
                 self.connections.append(ConnectedPeer(res, self))
 
-    def startConnectables(self):
-        for connectable in self.connections:
-            threading.Thread(target=connectable.run).start()
-        print("connected to each peer that we had a handshake with")
+    def start_new_conn(self):
+        conn = self.connections.pop()
+        threading.Thread(target=conn.run).start()
+        print("started connection with new peer")
 
 
 torrent_handler = TorrentHandler("./database/torrent.db")
@@ -118,5 +123,5 @@ asyncio.run(main_loop(settings, torrent_handler))
 
 x = downloadHandlerTCP(torrent1, settings)
 x.gatherConnectables()
-x.startConnectables()
+x.start_new_conn()
 x.run()

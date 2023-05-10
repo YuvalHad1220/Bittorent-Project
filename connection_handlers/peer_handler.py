@@ -116,17 +116,28 @@ class ConnectedPeer:
         self.to_send = []
 
     def run(self):
-        self.sock.settimeout(None)
+        self.sock.settimeout(4)
         while True:
             if self.to_send:
                 self.sock.send(self.to_send.pop())
 
+            try:
+                msg_len = self.sock.recv(4)
+            except TimeoutError:
+                print("too much time to get response!")
+                self.sock.close()
+                self.download_handler.start_new_conn()
+                return
 
-            msg_len = self.sock.recv(4)
-            msg_len = int.from_bytes(msg_len)
-
-            payload = self.sock.recv(msg_len)
-
+            msg_len = struct.unpack('! i', msg_len)[0]
+            print(f"msg len: {msg_len}")
+            try:
+                payload = self.sock.recv(msg_len)
+            except ValueError:
+                print("broken peer, not downloading from him")
+                self.sock.close()
+                self.download_handler.start_new_conn()
+                return
             if payload == b"":
                 # keep-alive
                 continue
@@ -160,4 +171,4 @@ class ConnectedPeer:
                 self.sock.send(unchoke)
                 self.choked = False
 
-            time.sleep(0.1)
+            time.sleep(0.01)

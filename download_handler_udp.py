@@ -21,7 +21,6 @@ TYPES = {
     "KEEP ALIVE": 4
 }
 
-self_addr = ('192.168.1.41', settings.port)
 
 TO_ENCRYPT = False
 
@@ -88,6 +87,7 @@ class downloadHandlerUDP:
 
     def __init__(self, torrent: Torrent, settings: Settings) -> None:
         self.torrent = torrent
+        self.settings = settings
 
         self.piece_handler = PieceHandler(self.torrent)
 
@@ -106,13 +106,15 @@ class downloadHandlerUDP:
         self.downloaded_piece = False
         self.validated_piece = False
 
+        self.self_addr = ('192.168.1.41', self.settings.port)
+
         if TO_ENCRYPT:
             self.pub_key, self.private_key = encryption.create_key_pairs()
         else:
             self.pub_key, self.private_key = None, None
 
     async def main_loop(self):
-        self.conn_as_server = await aioudp.open_local_endpoint(*self_addr)
+        self.conn_as_server = await aioudp.open_local_endpoint(*self.self_addr)
         print("started connection as server")
 
         while True:
@@ -286,7 +288,6 @@ class downloadHandlerUDP:
 
 
 torrent_handler = TorrentHandler("./database/torrent.db")
-settings = read_settings_file("./settings/settings.json")
 
 torrent1 = None
 for torrent in torrent_handler.get_torrents():
