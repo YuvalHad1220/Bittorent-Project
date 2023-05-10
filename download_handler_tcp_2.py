@@ -119,6 +119,7 @@ class downloadHandlerTCP:
         self.server = None
         self.current_peer = None
         self.loops_until_answer = 0
+        self.current_peer_index = -1
 
     async def make_handshake(self, peer_addr):
         try:
@@ -175,7 +176,7 @@ class downloadHandlerTCP:
 
             await self.handle_msg(self.current_peer)
 
-            if self.piece_handler.needed_piece_to_download_index() != -1:
+            if self.piece_handler.downloading:
                 self.loops_until_answer += 1
                 if not self.pending:
                     await self.request_block(self.piece_handler.needed_piece_to_download_index(), self.block_offset)
@@ -246,11 +247,8 @@ class downloadHandlerTCP:
 
             tasks.append(self.make_handshake(peer_addr))
         res = await asyncio.gather(*tasks)
-        to_ret = [item for item in res if item is not None]
+        return [item for item in res if item is not None]
 
-        import random
-        random.shuffle(to_ret)
-        return to_ret
 
     def on_block(self, msg_len, payload):
         msg_type, piece_index, block_offset = struct.unpack('! b i i', payload[:9])
@@ -276,7 +274,12 @@ class downloadHandlerTCP:
         self.pending = False
 
     def get_next_peer(self):
-        return self.peer_connections.pop()
+        self.current_peer_index += 1
+        print(f"returning peer index: {self.current_peer_index} ")
+
+        if self.current_peer_index >= len(self.peer_connections):
+            self.current_peer_index = 0
+        return self.peer_connections[self.current_peer_index]
 
     def write_data_to_block(self, piece_index, block_offset, block_length, block):
         if piece_index != self.piece_handler.needed_piece_to_download_index():

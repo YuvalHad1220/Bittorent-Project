@@ -10,6 +10,8 @@ class PieceHandler:
         self.torrent = torrent
         self.save_path = pathlib.Path(torrent.download_path) / "Pieces"
         self.downloaded_pieces = bytearray([0]) * len(self.torrent.pieces_info.pieces_hashes_list)
+        self.downloading = True
+        self.uploading = False
         self.get_existing_pieces()
 
     def get_existing_pieces(self):
@@ -22,11 +24,13 @@ class PieceHandler:
         """
         That function will save the validated piece into memory. once we have all validated pieces only then we will construct files from them
         """
-        if self.needed_piece_to_download_index() == -1:
-            return
+
         with open(self.save_path / f"{self.needed_piece_to_download_index()}.piece", 'wb') as f:
             f.write(validated_piece)
             self.downloaded_pieces[piece_index] = 1
+
+        if self.needed_piece_to_download_index() == -1:
+            self.downloading = False
 
         self.torrent.downloaded += self.torrent.pieces_info.piece_size_in_bytes
 
