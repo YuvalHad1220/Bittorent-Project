@@ -116,6 +116,7 @@ class downloadHandlerTCP:
 
         self.peer_connections: List[connectableTCP] = []
         self.server = None
+        self.current_peer = None
 
     async def make_handshake(self, peer_addr):
         try:
@@ -125,6 +126,7 @@ class downloadHandlerTCP:
 
         peer_writer.write(
             Handshake(self.torrent.info_hash, (self.settings.user_agent + self.settings.random_id).encode()).to_bytes())
+        await peer_writer.drain()
         try:
             resp = await asyncio.wait_for(peer_reader.read(68), 1)
             if not Handshake.from_bytes(resp):
@@ -156,13 +158,16 @@ class downloadHandlerTCP:
         self.server = await asyncio.start_server(self.handle_client, *self.self_addr)
         print("started connection as server")
         self.peer_connections = await self.gather_connectables()
+        self.current_peer = self.get_next_peer()
         while True:
 
-            tasks = []
-            for peer in self.peer_connections:
-                tasks.append(self.handle_msg(peer))
+            # tasks = []
+            # for peer in self.peer_connections:
+            #     tasks.append(self.handle_msg(peer))
+            #
+            # await asyncio.gather(*tasks)
 
-            await asyncio.gather(*tasks)
+            await self.handle_msg(self.current_peer)
 
             await self.request_block(self.piece_handler.needed_piece_to_download_index(), self.block_offset)
 
@@ -172,11 +177,10 @@ class downloadHandlerTCP:
                 f"PROGRESS IN PIECE: {round(100 * self.block_offset / self.torrent.pieces_info.piece_size_in_bytes, 2)}")
 
     async def request_block(self, piece_index, block_offset):
-        for conn in self.peer_connections:
-            writer = conn.peer_writer
-
-            request = Request(piece_index, block_offset, BLOCK_SIZE)
-            writer.write(request.to_bytes())
+        writer = self.current_peer.peer_writer
+        request = Request(piece_index, block_offset, BLOCK_SIZE)
+        writer.write(request.to_bytes())
+        await writer.drain()
 
     async def handle_msg(self, peer: connectableTCP):
         reader, writer = peer.peer_reader, peer.peer_writer
@@ -213,11 +217,13 @@ class downloadHandlerTCP:
         if not peer.interested:
             interested = struct.pack('> i b', 1, msg_types.interested)
             writer.write(interested)
+            await writer.drain()
             peer.interested = True
 
         if peer.choked:
             unchoke = struct.pack('> i b', 1, msg_types.unchoke)
             writer.write(unchoke)
+            await writer.drain()
             peer.choked = False
 
     async def gather_connectables(self):
@@ -228,7 +234,7 @@ class downloadHandlerTCP:
 
             tasks.append(self.make_handshake(peer_addr))
         res = await asyncio.gather(*tasks)
-        return [item for item in res if item is not None][:2]
+        return [item for item in res if item is not None]
 
     def on_block(self, msg_len, payload):
         msg_type, piece_index, block_offset = struct.unpack('! b i i', payload[:9])
@@ -242,6 +248,9 @@ class downloadHandlerTCP:
 
         self.block_offset = block_offset + len(block)
 
+    def get_next_peer(self):
+        return self.peer_connections.pop()
+
     def write_data_to_block(self, block_length, block):
         for i in range(block_length):
             if self.block_offset + i >= len(self.current_piece_data):
@@ -249,9 +258,11 @@ class downloadHandlerTCP:
                 print(f"think we downloaded")
                 with open("current_piece", 'wb') as f:
                     f.write(self.current_piece_data)
-                self.piece_handler.validate_piece(self.current_piece_data)
-                print(block[-5:].hex())
-                sys.exit(1)
+                if self.piece_handler.validate_piece(self.current_piece_data):
+                    sys.exit(1)
+                else:
+                    self.current_peer = self.get_next_peer()
+                    self.block_offset = 0
             else:
                 if i < len(block):
                     self.current_piece_data[i + self.block_offset] = block[i]
