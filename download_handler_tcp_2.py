@@ -254,10 +254,17 @@ class downloadHandlerTCP:
             f"piece index {piece_index}    block offset {block_offset}    block length recv {block_length}    block actual length {len(block)}")
 
         is_piece_success = self.write_data_to_block(block_offset, block_length, block)
-        if not is_piece_success:
-            self.block_offset = block_offset + len(block)
-        else:
+
+        if is_piece_success:
+            print("Success on getting piece! Yay")
             self.block_offset = 0
+
+        if is_piece_success is None:
+            self.block_offset = block_offset + block_length
+        elif not is_piece_success:
+            print("Didn't get piece. trying again")
+            self.block_offset = 0
+
 
         self.pending = False
 
@@ -274,6 +281,8 @@ class downloadHandlerTCP:
                 if self.piece_handler.validate_piece(self.current_piece_data):
                     print("piece hash validated")
                     return True
+                else:
+                    return False
 
             else:
                 if i < len(block):
@@ -292,8 +301,9 @@ class downloadHandlerTCP:
 
             else:
                 print("piece not validated")
+                return False
 
-        return False
+        return None
 
 
 torrent_handler = TorrentHandler("./database/torrent.db")
