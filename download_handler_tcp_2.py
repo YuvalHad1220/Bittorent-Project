@@ -106,6 +106,7 @@ class connectableTCP:
 
 class downloadHandlerTCP:
     def __init__(self, torrent: Torrent, settings: Settings) -> None:
+        self.pending = False
         self.torrent = torrent
         self.settings = settings
         self.piece_handler = PieceHandler(self.torrent)
@@ -159,8 +160,6 @@ class downloadHandlerTCP:
         print("started connection as server")
         self.peer_connections = await self.gather_connectables()
         self.current_peer = self.get_next_peer()
-
-        self.pending = False
 
         while True:
 
@@ -254,9 +253,11 @@ class downloadHandlerTCP:
         print(
             f"piece index {piece_index}    block offset {block_offset}    block length recv {block_length}    block actual length {len(block)}")
 
-        self.write_data_to_block(block_offset, block_length, block)
-
-        self.block_offset = block_offset + len(block)
+        is_piece_success = self.write_data_to_block(block_offset, block_length, block)
+        if not is_piece_success:
+            self.block_offset = block_offset + len(block)
+        else:
+            self.block_offset = 0
 
         self.pending = False
 
@@ -272,10 +273,8 @@ class downloadHandlerTCP:
                     f.write(self.current_piece_data)
                 if self.piece_handler.validate_piece(self.current_piece_data):
                     print("piece hash validated")
-                    sys.exit(1)
-                else:
-                    print("piece not validated")
-                    self.block_offset = 0
+                    return True
+
             else:
                 if i < len(block):
                     self.current_piece_data[i + self.block_offset] = block[i]
@@ -287,11 +286,15 @@ class downloadHandlerTCP:
             with open("current_piece", 'wb') as f:
                 f.write(self.current_piece_data)
             if self.piece_handler.validate_piece(self.current_piece_data):
-                print("piece hash validated")
-                self.piece_handler.on_validated_piece(self.current_piece_data, self.piece_handler.needed_piece_to_download_index())
+                self.piece_handler.on_validated_piece(self.current_piece_data,
+                                                      self.piece_handler.needed_piece_to_download_index())
+                return True
+
             else:
                 print("piece not validated")
-            sys.exit(1)
+
+        return False
+
 
 torrent_handler = TorrentHandler("./database/torrent.db")
 
