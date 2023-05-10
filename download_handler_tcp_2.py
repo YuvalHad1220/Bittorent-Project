@@ -118,6 +118,7 @@ class downloadHandlerTCP:
         self.peer_connections: List[connectableTCP] = []
         self.server = None
         self.current_peer = None
+        self.loops_until_answer = 0
 
     async def make_handshake(self, peer_addr):
         try:
@@ -160,9 +161,12 @@ class downloadHandlerTCP:
         print("started connection as server")
         self.peer_connections = await self.gather_connectables()
         self.current_peer = self.get_next_peer()
-
         while True:
-
+            if self.loops_until_answer > 40:
+                print("peer probably hanged on us, going to next peer and resetting stats")
+                self.current_peer = self.get_next_peer()
+                self.loops_until_answer = 0
+                self.pending = False
             # tasks = []
             # for peer in self.peer_connections:
             #     tasks.append(self.handle_msg(peer))
@@ -171,15 +175,18 @@ class downloadHandlerTCP:
 
             await self.handle_msg(self.current_peer)
 
-            if not self.pending:
-                await self.request_block(self.piece_handler.needed_piece_to_download_index(), self.block_offset)
-                self.pending = True
+            if self.piece_handler.needed_piece_to_download_index() != -1:
+                self.loops_until_answer += 1
+                if not self.pending:
+                    await self.request_block(self.piece_handler.needed_piece_to_download_index(), self.block_offset)
+                    self.pending = True
+                    print(
+                        f"PROGRESS IN PIECE: {round(100 * self.block_offset / self.torrent.pieces_info.piece_size_in_bytes, 2)}")
+                    print(self.block_offset, self.torrent.pieces_info.piece_size_in_bytes)
 
             await asyncio.sleep(MAX_TIME_TO_WAIT)
 
-            print(
-                f"PROGRESS IN PIECE: {round(100 * self.block_offset / self.torrent.pieces_info.piece_size_in_bytes, 2)}")
-            print(self.block_offset, self.torrent.pieces_info.piece_size_in_bytes)
+
 
     async def request_block(self, piece_index, block_offset):
         writer = self.current_peer.peer_writer
@@ -253,7 +260,7 @@ class downloadHandlerTCP:
         print(
             f"piece index {piece_index}    block offset {block_offset}    block length recv {block_length}    block actual length {len(block)}")
 
-        is_piece_success = self.write_data_to_block(block_offset, block_length, block)
+        is_piece_success = self.write_data_to_block(piece_index, block_offset, block_length, block)
 
         if is_piece_success:
             print("Success on getting piece! Yay")
@@ -265,13 +272,17 @@ class downloadHandlerTCP:
             print("Didn't get piece. trying again")
             self.block_offset = 0
 
-
+        self.loops_until_answer = 0
         self.pending = False
 
     def get_next_peer(self):
         return self.peer_connections.pop()
 
-    def write_data_to_block(self, block_offset, block_length, block):
+    def write_data_to_block(self, piece_index, block_offset, block_length, block):
+        if piece_index != self.piece_handler.needed_piece_to_download_index():
+            # something went wrong in reading that message so we want it all over again
+            return False
+
         for i in range(block_length):
             if block_offset + i >= len(self.current_piece_data):
                 # when we downloaded all piece
