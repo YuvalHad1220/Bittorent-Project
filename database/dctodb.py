@@ -289,11 +289,32 @@ class dctodb:
         return dc_childs
 
 
-    def delete(self, torrent_obj):
-        pass
+    def delete(self, instance, parent_indentifier = None, parent_id = None):
+        # we will find the object sub lists and sub dataclasses and delete them.
+        # then we will remove self
+
+        for list_field in self.list_fields:
+            list_of_items = getattr(instance, list_field.name)
+            for item in list_of_items:
+                item_as_obj = self.lists_in_class_mappings[list_field].dc(instance.index, item)
+                self.lists_in_class_mappings[list_field].delete(item_as_obj, self.identifier, instance.index)
 
 
-    def update(self, torrent_obj):
+        for field in self.dc_fields:
+            instance_dc_value = getattr(instance, field.name)
+            self.dc_in_class_mappings[field].delete(instance_dc_value)
+
+        
+        if parent_indentifier:
+            self._execute(f"DELETE FROM {self.table_name} WHERE {parent_indentifier} = ?", (parent_id,))
+        else:
+            self._execute(f"DELETE FROM {self.table_name} WHERE id = ?", (instance.index,))
+        self.conn.commit()
+        self.conn.close()
+        self.conn = None
+
+
+    def update(self, instance):
         pass
 
     # def update(self, find_by_field, *instances_of_dc):

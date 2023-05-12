@@ -11,6 +11,19 @@ SUCCESS = {"success": True}
 FAILURE = {"success": False}
 
 torrent_handler = TorrentHandler("./database/torrent.db")
+
+torrent_handler.delete_torrent(torrent_handler.get_torrents()[0])
+
+
+
+
+
+
+
+
+
+
+
 settings = read_settings_file("./settings/settings.json")
 announce_handler = main_loop(settings, torrent_handler)
 thread_handler = ThreadHandler(threading.current_thread(), None, announce_handler, None, None) # None is the udp tcp threads
@@ -51,7 +64,6 @@ def create_torrentx():
 @app.route("/add_torrent", methods=["GET", "POST"])
 def add_torrent():
     if request.method == "POST":
-        print("adfasdfdsaf")
         handle_torrent(request, torrent_handler)
         return redirect(url_for('homepage'))
 

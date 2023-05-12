@@ -14,7 +14,7 @@ from utils import msg_types, Request, Bitfield, Handshake
 
 settings = read_settings_file("./settings/settings.json")
 BLOCK_SIZE = 0x1000
-MAX_TIME_TO_WAIT = 0.01
+MAX_TIME_TO_WAIT = 0.1
 
 
 

@@ -24,8 +24,9 @@ class TorrentHandler:
             return True
         return False
 
-    def delete_torrent(self):
-        pass
+    def delete_torrent(self, torrent_obj):
+        self.torrent_list.remove(torrent_obj)
+        self.torrent_db.delete(torrent_obj)
 
     def get_torrents(self):
         return self.torrent_list
@@ -33,4 +34,3 @@ class TorrentHandler:
 
     def update_torrents(self):
         pass
-
