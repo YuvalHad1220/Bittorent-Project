@@ -3,7 +3,7 @@ from settings.settings import read_settings_file
 from app_operations import *
 from database.torrent_handler import TorrentHandler
 from utils import get_client_list
-from connection_handlers.trakcer_announce_handler import main_loop
+from trakcer_announce_handler import main_loop
 import threading
 from thread_handler import ThreadHandler
 
@@ -51,6 +51,7 @@ def create_torrentx():
 @app.route("/add_torrent", methods=["GET", "POST"])
 def add_torrent():
     if request.method == "POST":
+        print("adfasdfdsaf")
         handle_torrent(request, torrent_handler)
         return redirect(url_for('homepage'))
 

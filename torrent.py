@@ -14,8 +14,6 @@ class TorrentConnectionInfo:
     connected_seeders: int = 0
     leechers: int = 0
     connected_leechers: int = 0
-    upload_speed: int = 0
-    download_speed: int = 0
     index: int = 0
 
     @property
@@ -24,16 +22,6 @@ class TorrentConnectionInfo:
             return types.udp
         return types.tcp
     
-
-@dataclass
-class Pieces:
-    piece_size_in_bytes: int
-    pieces_hashes: bytes
-    index: int = 0
-
-    @property
-    def pieces_hashes_list(self):
-        return [self.pieces_hashes[i:i+20] for i in range(0, len(self.pieces_hashes), 20)]
 
 @dataclass
 class File:
@@ -49,16 +37,22 @@ class Torrent:
     info_hash: bytes
     file_path: str
     download_path: str
-    auto_decrypt: bool
     metadata: bytes
     is_torrentx: bool
-    pieces_info: Pieces
     connection_info: TorrentConnectionInfo
     files: List[File]
+    piece_size_in_bytes: int
+    pieces_hashes: bytes
+
     peers: List[str] = field(default_factory=list)
     downloaded: int = 0
     uploaded: int = 0
+    
     index: int = 0
+
+    @property
+    def pieces_hashes_list(self):
+        return [self.pieces_hashes[i:i+20] for i in range(0, len(self.pieces_hashes), 20)]
 
     @property
     def size(self):
@@ -76,9 +70,9 @@ class Torrent:
             "type": "torrentx" if self.is_torrentx else "torrent",
             "tracker protocol": self.connection_info.tracker_type,
             "size": self.size,
-            "download_speed": self.connection_info.download_speed,
+            "download_speed": 0,
             "downloaded": self.downloaded,
-            "upload_speed": self.connection_info.upload_speed,
+            "upload_speed": 0,
             "uploaded": self.uploaded,
             "seeders": self.connection_info.seeders,
             "leechers": self.connection_info.leechers,
@@ -101,7 +95,7 @@ def create_files_path(info_decoded, piece_size) -> List[File]:
     return file_list
 
 
-def create_torrent(torrent_file_path, torrent_file_bytes, download_path, to_decrypt):
+def create_torrent(torrent_file_path, torrent_file_bytes, download_path):
     decoded: dict = decode(torrent_file_bytes)[0]
     announce = decoded.pop(b'announce').decode()
     info = decoded.pop(b'info')
@@ -112,7 +106,6 @@ def create_torrent(torrent_file_path, torrent_file_bytes, download_path, to_decr
     pieces = info[b'pieces']
     metadata = encode(decoded)
     is_torrentx = b'torrentx' in decoded
-    pieces_obj = Pieces(piece_size, pieces)
     # if multiple files - than we push a list that is filled with dicts such as {b'length: int, b'path: list[path]}
     if b'files' in info:
         file_list = create_files_path(info, piece_size)
@@ -120,4 +113,5 @@ def create_torrent(torrent_file_path, torrent_file_bytes, download_path, to_decr
         file_list = create_files_path({b'files': [{b'length': info[b'length'],b'path': [info[b'name']]}]}, piece_size)
     
     connection_info_obj = TorrentConnectionInfo(announce, types.wait_to_start)
-    return Torrent(name, torrent_hash, torrent_file_path, download_path, to_decrypt, metadata, is_torrentx, pieces_obj, connection_info_obj, file_list)
+
+    return Torrent(name, torrent_hash, torrent_file_path, download_path, metadata, is_torrentx, connection_info_obj, file_list, piece_size, pieces)

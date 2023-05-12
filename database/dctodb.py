@@ -140,14 +140,6 @@ class dctodb:
             instance_dc_value = getattr(instance, field.name)
             self.dc_in_class_mappings[field].insert_one(instance_dc_value, {self.identifier: instance.index})
 
-    def insert_many(self, *instances):
-        """
-        Mega function that consists of multiple child functions.
-        1. We will insert our dataclasses and lists
-        2. We will insert ourselves, MEANWHILE updating our indexes as fitted in the db itself.
-        """
-        pass
-
     def insert_one(self, instance, extra_columns: Dict[str, Any] = dict()):
         """
         A potentially mega function, we want that function to insert one item (and update its value). if it has extra columns, obviously we need to insert them as well.
@@ -295,6 +287,14 @@ class dctodb:
             dc_childs[dc_field] = connector.fetch_where(f'{self.identifier} == {self_index}')[0]
 
         return dc_childs
+
+
+    def delete(self, torrent_obj):
+        pass
+
+
+    def update(self, torrent_obj):
+        pass
 
     # def update(self, find_by_field, *instances_of_dc):
     #     var_names = [field.name for field in fields(self.dc) if field.name != "index"]

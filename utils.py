@@ -16,9 +16,84 @@ import urllib
 import re
 import json
 
+import struct
+
 import bencoding
 
 from flask import make_response
+class Handshake:
+    identifer = "BitTorrent protocol".encode()
+    identifier_length = 19
+    total_payload_length = 68
+
+    def __init__(self, info_hash: bytes, peer_id: bytes):
+        self.peer_id = peer_id
+        self.info_hash = info_hash
+
+    def to_bytes(self):
+        return struct.pack("> b 19s q 20s 20s", self.identifier_length, self.identifer, 0, self.info_hash, self.peer_id)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        try:
+            identifer_length, _, _, info_hash, peer_id = struct.unpack("> b 19s q 20s 20s", payload[:68])
+        except struct.error:
+            return None
+
+        if identifer_length != 19:
+            return None
+
+        return Handshake(info_hash, peer_id)
+
+
+class Bitfield:
+    def __init__(self, bitfield: bytes):
+        self.bitfield = bitfield
+
+    def to_bytes(self):
+        return struct.pack(f'> i b {len(self.bitfield)}s', 1 + len(self.bitfield), msg_types.bitfield, self.bitfield)
+
+    def has_piece(self, piece_index):
+        byte_index = piece_index / 8
+        offset = piece_index % 8
+        return self.bitfield[byte_index] >> (7 - offset) & 1 != 0
+
+    @classmethod
+    def from_bytes(cls, payload):
+        try:
+            msg_id, bitfield = struct.unpack(f'> b {len(payload) - 1}s', payload)
+        except struct.error:
+            return None
+        if msg_types.bitfield != msg_id:
+            return None
+
+        return Bitfield(bitfield)
+
+
+class Request:
+    def __init__(self, piece_index, begin, piece_length):
+        self.begin = begin
+        self.piece_index = piece_index
+        self.piece_length = piece_length
+
+    def to_bytes(self):
+        total_length = 1 + 4 + 4 + 4
+        return struct.pack('> i b i i i', total_length, msg_types.request, self.piece_index, self.begin,
+                           self.piece_length)
+
+    def cancel_to_bytes(self):
+        total_length = 1 + 4 + 4 + 4
+        return struct.pack('> i b i i i', total_length, msg_types.cancel, self.piece_index, self.begin,
+                           self.piece_length)
+
+    @classmethod
+    def from_bytes(cls, payload):
+        msg_length, msg_type, piece_index, piece_begin, piece_length = struct.unpack('> i b i i i', payload)
+
+        if msg_type != msg_types.request:
+            return None
+
+        return Request(piece_index, piece_begin, piece_length)
 
 
 class sort_types:

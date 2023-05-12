@@ -8,11 +8,14 @@ class PieceHandler:
 
     def __init__(self, torrent: Torrent) -> None:
         self.torrent = torrent
-        self.save_path = pathlib.Path(torrent.download_path) / "Pieces"
-        self.downloaded_pieces = bytearray([0]) * len(self.torrent.pieces_info.pieces_hashes_list)
-        self.downloading = True
-        self.uploading = False
+        self.save_path = pathlib.Path(torrent.download_path) / f"{self.torrent.index}Pieces"
+        self.downloaded_pieces = bytearray([0]) * len(self.torrent.pieces_hashes_list)
         self.get_existing_pieces()
+
+    
+    @property
+    def downloading(self):
+        return True if self.torrent.downloaded < self.torrent.size else False
 
     def get_existing_pieces(self):
         self.save_path.mkdir(exist_ok=True)
@@ -29,11 +32,14 @@ class PieceHandler:
             f.write(validated_piece)
             self.downloaded_pieces[piece_index] = 1
 
-        if self.needed_piece_to_download_index() == -1:
-            self.downloading = False
 
-        self.torrent.downloaded += self.torrent.pieces_info.piece_size_in_bytes
+        self.torrent.downloaded += self.torrent.piece_size_in_bytes
 
+        if self.torrent.downloaded >= self.torrent.size():
+            print("finished downloading")
+            self.multiple_files_from_pieces()
+
+    @property
     def needed_piece_to_download_index(self):
         for i, piece_downloaded_value in enumerate(self.downloaded_pieces):
             if piece_downloaded_value == 0:
@@ -46,7 +52,7 @@ class PieceHandler:
         We will validate the piece against the current index
         """
 
-        for i, piece_hash in enumerate(self.torrent.pieces_info.pieces_hashes_list):
+        for i, piece_hash in enumerate(self.torrent.pieces_hashes_list):
             sha1 = hashlib.sha1()
             sha1.update(piece)
             res = sha1.digest()
@@ -72,7 +78,7 @@ class PieceHandler:
 
     def return_block(self, piece_index, block_offset, block_length, public_key=None):
         with open(self.torrent.download_path, 'rb') as f:
-            byte_pos = piece_index * self.torrent.pieces_info.piece_size_in_bytes + block_offset
+            byte_pos = piece_index * self.torrent.piece_size_in_bytes + block_offset
             f.seek(byte_pos)
             # Read the requested block
             block_data = f.read(block_length)
@@ -81,6 +87,5 @@ class PieceHandler:
             return block_data
 
         return encryption.encrypt_using_public(block_data, public_key)
-
-    def is_downloaded(self):
-        return self.get_existing_pieces() == -1
+    
+    
