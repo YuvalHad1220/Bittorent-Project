@@ -12,7 +12,11 @@ FAILURE = {"success": False}
 
 torrent_handler = TorrentHandler("./database/torrent.db")
 
-torrent_handler.delete_torrent(torrent_handler.get_torrents()[0])
+# torrent = torrent_handler.get_torrents()[0]
+
+# torrent.downloaded = 234234
+
+# torrent_handler.torrent_db.update(torrent)
 
 
 

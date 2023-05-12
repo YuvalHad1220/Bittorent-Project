@@ -128,19 +128,19 @@ class dctodb:
 
 
 
-    def _insert_list(self, instance):
+    def _insert_list(self, instance, update_id):
         for list_field in self.list_fields:
             list_of_items = getattr(instance, list_field.name)
             for item in list_of_items:
                 item_as_obj = self.lists_in_class_mappings[list_field].dc(instance.index, item)
-                self.lists_in_class_mappings[list_field].insert_one(item_as_obj)
+                self.lists_in_class_mappings[list_field].insert_one(item_as_obj, update_id)
 
-    def _insert_dcs(self, instance):
+    def _insert_dcs(self, instance, update_id):
         for field in self.dc_fields:
             instance_dc_value = getattr(instance, field.name)
-            self.dc_in_class_mappings[field].insert_one(instance_dc_value, {self.identifier: instance.index})
+            self.dc_in_class_mappings[field].insert_one(instance_dc_value, update_id, {self.identifier: instance.index})
 
-    def insert_one(self, instance, extra_columns: Dict[str, Any] = dict()):
+    def insert_one(self, instance, update_id = True, extra_columns: Dict[str, Any] = dict()):
         """
         A potentially mega function, we want that function to insert one item (and update its value). if it has extra columns, obviously we need to insert them as well.
         Extra columns is a dict: {col_name: col_value}
@@ -149,22 +149,38 @@ class dctodb:
 
         command = "INSERT INTO {} ({}) VALUES ({});"
         # Remember, we will need to handle dataclasses and lists seperatley so we exclude them from now
-        variable_names = [field.name for field in self.basic_fields if field.name != "index"]
-        variable_values = [getattr(instance, field_name) for field_name in variable_names]
-        for col_name, col_value in extra_columns.items():
-            variable_names.append(col_name)
-            variable_values.append(col_value)
+        variable_names = []
+        for field in self.basic_fields:
+            if field.name == "index":
+                if not update_id:
+                    variable_names.append("id")
+            else:
+                variable_names.append(field.name)
+
+        variable_values = []
+        for field_name in variable_names:
+            if field_name == "id":
+                variable_values.append(getattr(instance, "index"))
+
+            else:
+                variable_values.append(getattr(instance, field_name))
+
+        
+        for var_name, var_value in extra_columns.items():
+            variable_names.append(var_name)
+            variable_values.append(var_value)
 
         command = command.format(self.table_name, ', '.join(variable_names), ','.join(['?'] * len(variable_names)))
 
         _ = self._execute(command, variable_values)
         res = self.conn.commit()
-        instance.index = self._get_count()
+        if update_id:
+            instance.index = self._get_count()
 
         if self.dc_in_class_mappings:
-            self._insert_dcs(instance)
+            self._insert_dcs(instance, update_id)
         if self.lists_in_class_mappings:
-            self._insert_list(instance)
+            self._insert_list(instance, update_id)
 
         if self.conn:
             self.conn.close()
@@ -315,6 +331,12 @@ class dctodb:
 
 
     def update(self, instance):
+        
+        self.delete(instance)
+        self.insert_one(instance, False)
+        
+
+
         pass
 
     # def update(self, find_by_field, *instances_of_dc):

@@ -146,9 +146,7 @@ function display_bytes(){
 
 function update_settings(){
   const select = document.getElementById("spoofingVersion");
-  const selectedOption = select.options[select.selectedIndex];
-  const value = selectedOption.value;
-  const text = selectedOption.text;
+
   var dict = {
     'default_download_path': document.getElementById('defaultdownloadPath').value,
     'default_file_archive_path': document.getElementById('defaultArchivePath').value,
@@ -156,10 +154,19 @@ function update_settings(){
     'port': document.getElementById('port').value,
     'size_calc': document.getElementById('byteType').value,
     'max_torrentx_file_size': size_in_bytes,
-    'user_agent': value,
-    'peer_id': text,
     'random_id': document.getElementById("randomPeerId").value
   };
+
+  const selectedOption = select.options[select.selectedIndex];
+  if (selectedOption != null){
+    const value = selectedOption.value;
+    const text = selectedOption.text;
+    dict.user_agent = value;
+    dict.peer_id = text;
+  }
+
+  
+
   console.log(JSON.stringify(dict))
   resp = fetch('http://127.0.0.1:12345/edit_settings',
   
