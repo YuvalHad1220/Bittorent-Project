@@ -156,6 +156,20 @@ def print_bytes_as_bits(bytes_arr):
     print(''.join(['{:08b}'.format(b) for b in bytes_arr]))
 
 
+def get_item_hash(full_directory_to_item, piece_length):
+    hashes = b''
+    sha1 = hashlib.sha1()
+    with open(full_directory_to_item, "rb") as f:
+        while True:
+            piece_content = f.read(piece_length)
+            if piece_content == None:
+                return hashes
+            
+            hashes += hashlib.sha1(piece_content).digest()
+            
+
+
+
 def create_torrent_file_from_directory(piece_size, root_path, torrent_name, comments=None, trackers = None):
     # Create a list to hold the file dictionaries
     files = []
