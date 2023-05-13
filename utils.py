@@ -187,16 +187,12 @@ def create_torrent_file_from_directory(piece_size, root_path, torrent_name, comm
             # Get the file size
             filesize = os.path.getsize(filepath)
             # Calculate the SHA1 hash of the file
-            sha1 = hashlib.sha1()
-            with open(filepath, "rb") as f:
-                for chunk in iter(lambda: f.read(piece_size), b""):
-                    sha1.update(chunk)
             # Add the file dictionary to the list
             dir_files.append({
                 "path": [os.path.relpath(filepath, root_path)],
                 "length": filesize,
             })
-            pieces_list.append(sha1.digest())
+            pieces_list.append(get_item_hash(filepath, piece_size))
         # Add the directory dictionary to the files list
         if dir_files:
             files.append({
