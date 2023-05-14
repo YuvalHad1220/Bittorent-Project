@@ -241,14 +241,15 @@ class downloadHandlerTCP:
         return None
 
 
-torrent_handler = TorrentHandler("./database/torrent.db")
+if __name__ == "__main__":
+    torrent_handler = TorrentHandler("./database/torrent.db")
 
-torrent1 = None
-for torrent in torrent_handler.get_torrents():
-    if not torrent.is_torrentx:
-        torrent1 = torrent
-        break
-#
-tcp = downloadHandlerTCP(torrent1, settings)
-asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))
-asyncio.run(tcp.main_loop())
+    torrent1 = None
+    for torrent in torrent_handler.get_torrents():
+        if not torrent.is_torrentx:
+            torrent1 = torrent
+            break
+    #
+    tcp = downloadHandlerTCP(torrent1, settings)
+    asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))
+    asyncio.run(tcp.main_loop())

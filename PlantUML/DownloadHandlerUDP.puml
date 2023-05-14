@@ -1,36 +1,40 @@
 @startuml
 
-class downloadHandlerUDP {
-    -torrent: Torrent
-    -piece_handler: PieceHandler
-    -block_offset: int
-    -piece_index: int
-    -downloading: bool
-    -uploading: bool
-    -peer_connections: List[connectableUDP]
-    -conn_as_server: None
-    -current_piece_data: bytearray
-    -pub_key: str
-    -private_key: str
-    +main_loop()
-    +gather_connectables()
-    +listen_for_msg(connectable: connectableUDP)
-    +on_peer_trying_to_connect(msg, addr)
-    +on_block_request(connectable, addr, trans_id, piece_index, block_offset, block_length)
-    +on_block_receive(msg, length, block_offset, block_length)
-    +request_block()
+class connectableTCP {
+    - peer_addr: str
+    - peer_bitfield: None
+    - peer_choked: bool
+    - interested: bool
+    - choked: bool
+    - peer_reader: object
+    - peer_writer: object
+    + __init__(peer_addr: str, peer_reader: object, peer_writer: object): void
 }
 
-class connectableUDP {
-    -peer_addr: tuple
-    -trans_id: int
-    -conn_with_peer: socket.socket
-    -peer_pub_key: str
-    +init(peer_addr: tuple, conn: socket.socket, trans_id: int, peer_pub_key: str = None)
+class downloadHandlerTCP {
+    - pending: bool
+    - torrent: Torrent
+    - settings: Settings
+    - piece_handler: PieceHandler
+    - block_offset: int
+    - current_piece_data: bytearray
+    - self_addr: tuple
+    - peer_connections: List[connectableTCP]
+    - server: None
+    - current_peer: None
+    - loops_until_answer: int
+    - current_peer_index: int
+    + __init__(torrent: Torrent, settings: Settings): void
+  + make_handshake(peer_addr): coroutine
+  + handle_client(reader, writer): coroutine
+  + main_loop(): coroutine
+  + request_block(piece_index, block_offset): coroutine
+  + handle_msg(peer: connectableTCP): coroutine
+  + gather_connectables(): coroutine
+  + on_block(msg_len, payload): None
+  + get_next_peer(): None
+  + write_data_to_block(piece_index, block_offset, block_length, block): None
 }
-
-
-
-connectableUDP -> downloadHandlerUDP : connections
+connectableTCP -> downloadHandlerTCP : peer_connections
 
 @enduml
