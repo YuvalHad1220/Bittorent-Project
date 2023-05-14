@@ -358,7 +358,7 @@ async def announce_udp_torrentx(torrents_of_same_tracker: List[Torrent], setting
         torrents_of_same_tracker = torrents_of_same_tracker[:112]
 
 
-    torrents_to_announce = [torrent, match_announce_to_torrent(torrent) for torrent in torrents_of_same_tracker]
+    torrents_to_announce = [(torrent, match_announce_to_torrent(torrent)) for torrent in torrents_of_same_tracker]
 
 
     remote_conn.send(announce_struct)
@@ -401,7 +401,7 @@ def torrentx_parse_answer_for_torrent(resp, read_from):
         peer_list.append(peer_str)
 
 
-    bytes_read = i * 6 + 8
+    bytes_read = peer_count * 6 + 8
     return seeders, leechers, peer_list, bytes_read 
     
 def match_announce_to_torrent(torrent):

@@ -123,7 +123,7 @@ class downloadHandlerUDP:
                 await asyncio.sleep(MAX_TIME_TO_WAIT)
                 continue
 
-            if b'bittorrent' in msg:
+            if b'bittorrent' == msg[:10]:
                 await self.on_peer_trying_to_connect(msg, addr)
 
 
