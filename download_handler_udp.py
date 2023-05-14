@@ -18,13 +18,7 @@ MAX_TIME_TO_WAIT = 0.1
 TYPES = {
     "REQUEST": 1,
     "PIECE": 2,
-    "NO PIECE": 3,
-    "KEEP ALIVE": 4
 }
-
-
-TO_ENCRYPT = False
-
 
 def parse_request(payload):
     return struct.unpack('i b b i i i', payload)
@@ -60,6 +54,7 @@ class connectableUDP:
         self.trans_id = trans_id
         self.conn_with_peer = conn
         self.peer_pub_key = peer_pub_key
+        self.last_keep_alive = None
         print(f"{peer_addr} - {trans_id} - {peer_pub_key}")
 
 
