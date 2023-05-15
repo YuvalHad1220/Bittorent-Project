@@ -22,6 +22,7 @@ class TorrentConnectionInfo:
             return types.udp
         return types.tcp
     
+    
 
 @dataclass
 class File:

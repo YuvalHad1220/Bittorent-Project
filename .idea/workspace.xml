@@ -3,7 +3,10 @@
   <component name="ChangeListManager">
     <list default="true" id="01a8ddf7-68fc-4aa3-9894-946d371b76b0" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trakcer_announce_handler.py" beforeDir="false" afterPath="$PROJECT_DIR$/trakcer_announce_handler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/dctodb.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/dctodb.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/database/torrent.db" beforeDir="false" afterPath="$PROJECT_DIR$/database/torrent.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/settings/settings.json" beforeDir="false" afterPath="$PROJECT_DIR$/settings/settings.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

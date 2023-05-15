@@ -6,20 +6,24 @@ from utils import get_client_list
 from trakcer_announce_handler import main_loop
 import threading
 from thread_handler import ThreadHandler
-
 SUCCESS = {"success": True}
 FAILURE = {"success": False}
 
 torrent_handler = TorrentHandler("./database/torrent.db")
 
-# torrent = torrent_handler.get_torrents()[0]
+torrent = torrent_handler.get_torrents()[0]
 
-# torrent.downloaded = 234234
+torrent.downloaded = 234234
+torrent.connection_info.announce_url = "TEST"
+torrent.peers.append("234098hjsdf")
+torrent.peers.append("fsd")
+torrent.peers.append("asdf")
+torrent.peers.append("vcxvv")
+torrent_handler.torrent_db.update(torrent)
 
-# torrent_handler.torrent_db.update(torrent)
 
-
-
+import sys
+sys.exit(1)
 
 
 

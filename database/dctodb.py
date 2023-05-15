@@ -128,19 +128,19 @@ class dctodb:
 
 
 
-    def _insert_list(self, instance, update_id):
+    def _insert_list(self, instance):
         for list_field in self.list_fields:
             list_of_items = getattr(instance, list_field.name)
             for item in list_of_items:
                 item_as_obj = self.lists_in_class_mappings[list_field].dc(instance.index, item)
-                self.lists_in_class_mappings[list_field].insert_one(item_as_obj, update_id)
+                self.lists_in_class_mappings[list_field].insert_one(item_as_obj)
 
-    def _insert_dcs(self, instance, update_id):
+    def _insert_dcs(self, instance):
         for field in self.dc_fields:
             instance_dc_value = getattr(instance, field.name)
-            self.dc_in_class_mappings[field].insert_one(instance_dc_value, update_id, {self.identifier: instance.index})
+            self.dc_in_class_mappings[field].insert_one(instance_dc_value, {self.identifier: instance.index})
 
-    def insert_one(self, instance, update_id = True, extra_columns: Dict[str, Any] = dict()):
+    def insert_one(self, instance, extra_columns: Dict[str, Any] = dict()):
         """
         A potentially mega function, we want that function to insert one item (and update its value). if it has extra columns, obviously we need to insert them as well.
         Extra columns is a dict: {col_name: col_value}
@@ -149,23 +149,9 @@ class dctodb:
 
         command = "INSERT INTO {} ({}) VALUES ({});"
         # Remember, we will need to handle dataclasses and lists seperatley so we exclude them from now
-        variable_names = []
-        for field in self.basic_fields:
-            if field.name == "index":
-                if not update_id:
-                    variable_names.append("id")
-            else:
-                variable_names.append(field.name)
+        variable_names = [field.name for field in self.basic_fields]
+        variable_values = [getattr(instance, field.name) for field in self.basic_fields]
 
-        variable_values = []
-        for field_name in variable_names:
-            if field_name == "id":
-                variable_values.append(getattr(instance, "index"))
-
-            else:
-                variable_values.append(getattr(instance, field_name))
-
-        
         for var_name, var_value in extra_columns.items():
             variable_names.append(var_name)
             variable_values.append(var_value)
@@ -174,13 +160,12 @@ class dctodb:
 
         _ = self._execute(command, variable_values)
         res = self.conn.commit()
-        if update_id:
-            instance.index = self._get_count()
+        instance.index = self._get_count()
 
         if self.dc_in_class_mappings:
-            self._insert_dcs(instance, update_id)
+            self._insert_dcs(instance)
         if self.lists_in_class_mappings:
-            self._insert_list(instance, update_id)
+            self._insert_list(instance)
 
         if self.conn:
             self.conn.close()
@@ -305,7 +290,7 @@ class dctodb:
         return dc_childs
 
 
-    def delete(self, instance, parent_indentifier = None, parent_id = None):
+    def delete(self, instance, parent_indentifier = None, parent_id_value = None):
         # we will find the object sub lists and sub dataclasses and delete them.
         # then we will remove self
 
@@ -322,25 +307,71 @@ class dctodb:
 
         
         if parent_indentifier:
-            self._execute(f"DELETE FROM {self.table_name} WHERE {parent_indentifier} = ?", (parent_id,))
+            self._execute(f"DELETE FROM {self.table_name} WHERE {parent_indentifier} = ?", (parent_id_value,))
         else:
             self._execute(f"DELETE FROM {self.table_name} WHERE id = ?", (instance.index,))
         self.conn.commit()
-        self.conn.close()
-        self.conn = None
+        if self.conn:
+            self.conn.close()
+            self.conn = None
 
 
-    def update(self, instance):
+
+
+    def update_list(self, instance):
+      
+        for list_field in self.list_fields:
+            list_of_items = getattr(instance, list_field.name)
+            for item in list_of_items:
+                item_as_obj = self.lists_in_class_mappings[list_field].dc(instance.index, item)
+                self.lists_in_class_mappings[list_field].delete(item_as_obj, self.identifier, instance.index)
+
+        self._insert_list(instance)
+        # items_added = []
+        # items_removed = []
+        # items_shared = []
+
+        # for item in new_existing_list:
+        #     if all(item != old_item for old_item in old_list_in_db):
+        #         items_added.append(item)
+
+        # for item in old_list_in_db:
+        #     if all(item != new_item for new_item in new_existing_list):
+        #         items_removed.append(item)
+
+        # for item in new_existing_list:
+        #     if any(item == old_item for old_item in old_list_in_db):
+        #         items_shared.append(item)
+
+
+        # print(f"shared: {items_shared}, new: {items_added}, old: {items_removed}")
+
+
+
+
+    def update(self, instance, parent_identifer_key = None, parent_identifier_value = None):
+        if self.list_fields:
+            self.update_list(instance)
+
+        for _sub_class in self.dc_fields:
+            self.dc_in_class_mappings[_sub_class].update(getattr(instance, _sub_class.name), self.identifier, instance.index)
+
+
+
+        var_names = [field.name +" = ?" for field in self.basic_fields if field.name != "index"]
+        var_values = [getattr(instance, field.name) for field in self.basic_fields if field.name != "index"]
+        command = "UPDATE {} SET {} WHERE {};"
+        command = command.format(self.table_name,', '.join(var_names), f"id = {instance.index}")
         
-        self.delete(instance)
-        self.insert_one(instance, False)
-        
+        self._execute(command, var_values)
+
+        self.conn.commit()
+
+        if self.conn:
+            self.conn.close()
+            self.conn = None
 
 
-        pass
-
-    # def update(self, find_by_field, *instances_of_dc):
-    #     var_names = [field.name for field in fields(self.dc) if field.name != "index"]
     #     command = f"UPDATE {self.dc.__name__} SET {''.join(f'{name} = ?,' for name in var_names)}"
     #     command = command[:-1]  # remove ','
 
