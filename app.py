@@ -15,13 +15,11 @@ torrent = torrent_handler.get_torrents()[0]
 
 torrent.downloaded = 234234
 torrent.connection_info.announce_url = "TEST"
-torrent.peers.append("234098hjsdf")
-torrent.peers.append("fsd")
-torrent.peers.append("asdf")
-torrent.peers.append("vcxvv")
+torrent.peers = []
 torrent_handler.torrent_db.update(torrent)
 
 
+print(torrent.peers)
 import sys
 sys.exit(1)
 

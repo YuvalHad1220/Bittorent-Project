@@ -133,6 +133,7 @@ class dctodb:
             list_of_items = getattr(instance, list_field.name)
             for item in list_of_items:
                 item_as_obj = self.lists_in_class_mappings[list_field].dc(instance.index, item)
+                print(item_as_obj)
                 self.lists_in_class_mappings[list_field].insert_one(item_as_obj)
 
     def _insert_dcs(self, instance):
@@ -149,8 +150,8 @@ class dctodb:
 
         command = "INSERT INTO {} ({}) VALUES ({});"
         # Remember, we will need to handle dataclasses and lists seperatley so we exclude them from now
-        variable_names = [field.name for field in self.basic_fields]
-        variable_values = [getattr(instance, field.name) for field in self.basic_fields]
+        variable_names = [field.name for field in self.basic_fields if field.name != "index"]
+        variable_values = [getattr(instance, field.name) for field in self.basic_fields if field.name != "index"]
 
         for var_name, var_value in extra_columns.items():
             variable_names.append(var_name)
@@ -170,15 +171,6 @@ class dctodb:
         if self.conn:
             self.conn.close()
             self.conn = None
-
-    def _fetch_lists_from_subtable(self, index):
-        # we know what's the table name, so we will just fetch_where id is the same as ours
-        list_fields_values_mappings = dict()
-        for list_field in self.list_fields:
-            list_items_as_obj = self.lists_in_class_mappings[list_field].fetch_where(f'{self.identifier} == {index}')
-            list_items_as_original_type = [row.item_val for row in list_items_as_obj]
-            list_fields_values_mappings[list_field] = list_items_as_original_type
-        return list_fields_values_mappings
 
     def fetch_all(self) -> List[Tuple[Any, Union[Dict, None]]]:
         """
@@ -306,8 +298,7 @@ class dctodb:
             self.dc_in_class_mappings[field].delete(instance_dc_value)
 
         
-        if parent_indentifier:
-            self._execute(f"DELETE FROM {self.table_name} WHERE {parent_indentifier} = ?", (parent_id_value,))
+
         else:
             self._execute(f"DELETE FROM {self.table_name} WHERE id = ?", (instance.index,))
         self.conn.commit()
@@ -316,35 +307,24 @@ class dctodb:
             self.conn = None
 
 
-
+    def _fetch_lists_from_subtable(self, index):
+        # we know what's the table name, so we will just fetch_where id is the same as ours
+        list_fields_values_mappings = dict()
+        for list_field in self.list_fields:
+            list_items_as_obj = self.lists_in_class_mappings[list_field].fetch_where(f'{self.identifier} == {index}')
+            list_items_as_original_type = [row.item_val for row in list_items_as_obj]
+            list_fields_values_mappings[list_field] = list_items_as_original_type
+        return list_fields_values_mappings
 
     def update_list(self, instance):
-      
         for list_field in self.list_fields:
-            list_of_items = getattr(instance, list_field.name)
-            for item in list_of_items:
-                item_as_obj = self.lists_in_class_mappings[list_field].dc(instance.index, item)
-                self.lists_in_class_mappings[list_field].delete(item_as_obj, self.identifier, instance.index)
-
+            lists = self.lists_in_class_mappings[list_field].fetch_where(f"{self.identifier} == {instance.index}")
+            for list_item in lists:
+                self.lists_in_class_mappings[list_field].delete(list_item, self.identifier, instance.index)
+            
+        print("deleted old lists, inserting new ones")
         self._insert_list(instance)
-        # items_added = []
-        # items_removed = []
-        # items_shared = []
 
-        # for item in new_existing_list:
-        #     if all(item != old_item for old_item in old_list_in_db):
-        #         items_added.append(item)
-
-        # for item in old_list_in_db:
-        #     if all(item != new_item for new_item in new_existing_list):
-        #         items_removed.append(item)
-
-        # for item in new_existing_list:
-        #     if any(item == old_item for old_item in old_list_in_db):
-        #         items_shared.append(item)
-
-
-        # print(f"shared: {items_shared}, new: {items_added}, old: {items_removed}")
 
 
 
