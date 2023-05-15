@@ -3,7 +3,9 @@ from settings.settings import read_settings_file
 from app_operations import *
 from database.torrent_handler import TorrentHandler
 from utils import get_client_list
-from trakcer_announce_handler import main_loop
+from download_handler_tcp import main_loop as tcp_main_loop
+from download_handler_udp import main_loop as udp_main_loop
+from trakcer_announce_handler import main_loop as announce_main_loop
 import threading
 from thread_handler import ThreadHandler
 SUCCESS = {"success": True}
@@ -11,30 +13,17 @@ FAILURE = {"success": False}
 
 torrent_handler = TorrentHandler("./database/torrent.db")
 
-torrent = torrent_handler.get_torrents()[0]
-
-torrent.downloaded = 234234
-torrent.connection_info.announce_url = "TEST"
-torrent.peers = []
-torrent_handler.update
-
-
-print(torrent.peers)
-import sys
-sys.exit(1)
-
-
-
-
-
-
-
-
 settings = read_settings_file("./settings/settings.json")
-announce_handler = main_loop(settings, torrent_handler)
-thread_handler = ThreadHandler(threading.current_thread(), None, announce_handler, None, None) # None is the udp tcp threads
+announce_handler = announce_main_loop(settings, torrent_handler)
+udp_handler = udp_main_loop(settings, torrent_handler)
+tcp_handler = tcp_main_loop(settings, torrent_handler)
+
+
+
+thread_handler = ThreadHandler(threading.current_thread(), torrent_handler.update_loop, announce_handler, udp_handler, tcp_handler) # None is the udp tcp threads
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "df0331cefc6c2b9a5d0208a726a5d1c0fd37324feba25506"
+
 thread_handler.start_threads()
 
 
@@ -84,4 +73,5 @@ def homepage():
 
 
 if __name__ == "__main__":
+    print("running app thread")
     app.run(port=12345, debug=False)

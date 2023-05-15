@@ -12,6 +12,15 @@ class ThreadHandler:
 
     def start_threads(self):
         Thread(target=self._announcement_thread_start).start()
+        Thread(target=self._udp_thread_start).start()
+        Thread(target=self._tcp_thread_start).start()
+        Thread(target=self.io_thread).start()
 
     def _announcement_thread_start(self):
         asyncio.run(self.announcement_loop)
+
+    def _udp_thread_start(self):
+        asyncio.run(self.udp_thread)
+
+    def _tcp_thread_start(self):
+        asyncio.run(self.tcp_thread)

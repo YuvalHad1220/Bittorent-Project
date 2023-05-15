@@ -1,7 +1,6 @@
 from database.dctodb import dctodb
 from torrent import Torrent
-from utils import sort_types
-
+import time
 
 """
 Instead of taking care of torrent handling (getting sorted list, adding torrent to list and database, remove from list and database etc)
@@ -10,9 +9,10 @@ we will create a torrent handler that will take care of that in every operation
 
 
 class TorrentHandler:
+
     def __init__(self, db_filename) -> None:
         self.torrent_db = dctodb(Torrent, db_filename)
-        self.torrent_list: list[Torrent] = self.torrent_db.fetch_all()
+        self.torrent_list: list[Torrent] = self.torrent_db.action_to_db(self.torrent_db.fetch_all)
 
     def add_torrent(self, torrent_obj: Torrent):
         old_index = torrent_obj.index
@@ -28,13 +28,16 @@ class TorrentHandler:
         self.torrent_list.remove(torrent_obj)
         self.torrent_db.action_to_db(self.torrent_db.delete, (torrent_obj, ))
 
-    def update_torrent(self, torrent_obj):
-        self.torrent_db.action_to_db(self.torrent_db.update, (torrent_obj, ))
-        
+
     def get_torrents(self):
         return self.torrent_list
 
 
-    def update_torrents(self):
-        self.torrent_db.action_to_db(self.torrent_db.update_all, (*self.torrent_list, ))
-        
+    def update_torrents(self, *torrents):
+        self.torrents_to_update += torrents
+
+    def update_loop(self):
+        print("started io thread")
+        while True:
+            self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
+            time.sleep(1)

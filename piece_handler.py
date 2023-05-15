@@ -2,13 +2,14 @@ from torrent import Torrent
 import pathlib
 import hashlib
 import encryption
-
+from utils import torrent_types
 
 class PieceHandler:
 
     def __init__(self, torrent: Torrent) -> None:
         self.torrent = torrent
         self.save_path = pathlib.Path(torrent.download_path) / f"{self.torrent.index}Pieces"
+        self.save_path.mkdir(exist_ok=True)
         self.downloaded_pieces = bytearray([0]) * len(self.torrent.pieces_hashes_list)
         self.get_existing_pieces()
 
@@ -18,7 +19,6 @@ class PieceHandler:
         return True if self.torrent.downloaded < self.torrent.size else False
 
     def get_existing_pieces(self):
-        self.save_path.mkdir(exist_ok=True)
         for filename in self.save_path.glob('*'):
             index, _ = filename.name.split('.')
             self.downloaded_pieces[int(index)] = 1
@@ -36,8 +36,8 @@ class PieceHandler:
         self.torrent.downloaded += self.torrent.piece_size_in_bytes
 
         if self.torrent.downloaded >= self.torrent.size():
-            print("finished downloading")
-            self.multiple_files_from_pieces()
+            self.on_download_finish()
+
 
     @property
     def needed_piece_to_download_index(self):
@@ -64,10 +64,12 @@ class PieceHandler:
         return False
 
     def on_download_finish(self):
-        self.multiple_files_from_pieces()
-        # extra things to do if needed
+        print("finished downloading")
+        self.files_from_pieces()
+        self.torrent.connection_info.state = torrent_types.wait_to_finish
 
-    def multiple_files_from_pieces(self):
+
+    def files_from_pieces(self):
         for file_obj in self.torrent.files:
             file_path = pathlib.Path(self.save_path).parent / file_obj.path_name
             # file_path.mkdir(exist_ok=True)

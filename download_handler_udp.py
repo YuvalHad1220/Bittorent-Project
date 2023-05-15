@@ -1,18 +1,15 @@
 import struct
-import sys
 
-from . import trakcer_announce_handler
 from database.torrent_handler import TorrentHandler
 import asyncio
 from torrent import Torrent
 from piece_handler import PieceHandler
 import aioudp
-from settings.settings import read_settings_file, Settings
+from settings.settings import Settings
 from typing import List
 import encryption
 import socket
 
-settings = read_settings_file("./settings/settings.json")
 BLOCK_SIZE = 0xf000
 MAX_TIME_TO_WAIT = 0.1
 TYPES = {
@@ -289,16 +286,8 @@ class downloadHandlerUDP:
                     await connection.conn_with_peer.drain()
 
 
-torrent_handler = TorrentHandler("./database/torrent.db")
+async def main_loop(settings, torrent_handler):
+    print("running udp download/upload loop")
+    tasks = [downloadHandlerUDP(torrent, settings).main_loop() for torrent in torrent_handler.get_torrents()]
 
-torrent1 = None
-for torrent in torrent_handler.get_torrents():
-    if torrent.is_torrentx:
-        torrent1 = torrent
-        break
-#
-udp = downloadHandlerUDP(torrent1, settings)
-asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))
-asyncio.run(udp.main_loop())
-
-
+    await asyncio.gather(*tasks)

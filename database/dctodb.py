@@ -52,9 +52,12 @@ def _sql_represent(name, type) -> str:
 class dctodb:
 
 
-    def action_to_db(self, function_pointer, function_args):
+    def action_to_db(self, function_pointer, *function_args):
         self.conn = _create_connection(self.db_filename)
-        res = function_pointer(*function_args)
+        if len(function_args) == 0:
+            res = function_pointer()
+        else:
+            res = function_pointer(*function_args)
         self.conn.close()
         self.conn = None
 
@@ -94,9 +97,13 @@ class dctodb:
             _sql_represent(col_name, col_type) for col_name, col_type in self.extra_columns.items()]
         args = ', '.join(args)
         command = command.format(self.table_name, args)
+        if not self.conn:
+            self.conn = _create_connection(self.db_filename)
         _ = self._execute(command)
+
         self.conn.close()
         self.conn = None
+
 
 
     def __init__(self, dc: Type[Any], db_filename: str, extra_columns: Dict[str, Any] = dict()):
@@ -119,6 +126,8 @@ class dctodb:
         
 
     def _execute(self, command, args=None):
+        if not self.conn:
+            self.conn = _create_connection(self.db_filename)
         cur = self.conn.cursor()
         if args:
             res = cur.execute(command, args)
@@ -224,9 +233,6 @@ class dctodb:
         command = command.format(self.table_name, condition)
         res = self._execute(command)
         rows = res.fetchall()
-
-        self.conn.close()
-        self.conn = None
 
         for row in rows:
             index = row[0]

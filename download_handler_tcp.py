@@ -12,12 +12,8 @@ import socket
 
 from utils import msg_types, Request, Bitfield, Handshake
 
-settings = read_settings_file("./settings/settings.json")
 BLOCK_SIZE = 0x1000
 MAX_TIME_TO_WAIT = 0.1
-
-
-
 
 class connectableTCP:
     def __init__(self, peer_addr, peer_reader, peer_writer):
@@ -240,16 +236,8 @@ class downloadHandlerTCP:
 
         return None
 
+async def main_loop(settings, torrent_handler):
+    print("running tcp download/upload loop")
+    tasks = [downloadHandlerTCP(torrent, settings).main_loop() for torrent in torrent_handler.get_torrents()]
 
-if __name__ == "__main__":
-    torrent_handler = TorrentHandler("./database/torrent.db")
-
-    torrent1 = None
-    for torrent in torrent_handler.get_torrents():
-        if not torrent.is_torrentx:
-            torrent1 = torrent
-            break
-    #
-    tcp = downloadHandlerTCP(torrent1, settings)
-    asyncio.run(trakcer_announce_handler.main_loop(settings, torrent_handler))
-    asyncio.run(tcp.main_loop())
+    await asyncio.gather(*tasks)
