@@ -51,6 +51,17 @@ def _sql_represent(name, type) -> str:
 
 class dctodb:
 
+
+    def action_to_db(self, function_pointer, function_args):
+        self.conn = _create_connection(self.db_filename)
+        res = function_pointer(*function_args)
+        self.conn.close()
+        self.conn = None
+
+        return res
+
+
+
     def _create_class(self, field, item_type: Type):
         """
         helper class to store lists
@@ -108,8 +119,6 @@ class dctodb:
         
 
     def _execute(self, command, args=None):
-        if not self.conn:
-            self.conn = _create_connection(self.db_filename)
         cur = self.conn.cursor()
         if args:
             res = cur.execute(command, args)
@@ -122,8 +131,6 @@ class dctodb:
     def _get_count(self) -> int:
         res = self._execute(f"SELECT COUNT(*) FROM {self.dc.__name__}")
         res = res.fetchone()[0]
-        self.conn.close()
-        self.conn = None
         return res
 
 
@@ -133,7 +140,6 @@ class dctodb:
             list_of_items = getattr(instance, list_field.name)
             for item in list_of_items:
                 item_as_obj = self.lists_in_class_mappings[list_field].dc(instance.index, item)
-                print(item_as_obj)
                 self.lists_in_class_mappings[list_field].insert_one(item_as_obj)
 
     def _insert_dcs(self, instance):
@@ -167,10 +173,7 @@ class dctodb:
             self._insert_dcs(instance)
         if self.lists_in_class_mappings:
             self._insert_list(instance)
-
-        if self.conn:
-            self.conn.close()
-            self.conn = None
+        
 
     def fetch_all(self) -> List[Tuple[Any, Union[Dict, None]]]:
         """
@@ -189,8 +192,6 @@ class dctodb:
         command = command.format(self.table_name)
         res = self._execute(command)
         rows = res.fetchall()
-        self.conn.close()
-        self.conn = None
 
         for row in rows:
             index = row[0]
@@ -298,13 +299,13 @@ class dctodb:
             self.dc_in_class_mappings[field].delete(instance_dc_value)
 
         
+        if parent_indentifier:
+            self._execute(f"DELETE FROM {self.table_name} WHERE {parent_indentifier} = ?", (parent_id_value, ))
 
         else:
             self._execute(f"DELETE FROM {self.table_name} WHERE id = ?", (instance.index,))
         self.conn.commit()
-        if self.conn:
-            self.conn.close()
-            self.conn = None
+
 
 
     def _fetch_lists_from_subtable(self, index):
@@ -316,73 +317,39 @@ class dctodb:
             list_fields_values_mappings[list_field] = list_items_as_original_type
         return list_fields_values_mappings
 
+
+    """
+    Definetly not the most efficient approach. may take some extra work
+    """
+
+
     def update_list(self, instance):
         for list_field in self.list_fields:
             lists = self.lists_in_class_mappings[list_field].fetch_where(f"{self.identifier} == {instance.index}")
             for list_item in lists:
                 self.lists_in_class_mappings[list_field].delete(list_item, self.identifier, instance.index)
             
-        print("deleted old lists, inserting new ones")
         self._insert_list(instance)
 
 
 
 
 
-    def update(self, instance, parent_identifer_key = None, parent_identifier_value = None):
-        if self.list_fields:
-            self.update_list(instance)
+    def update(self, *instances):
+        for instance in instances:
+            if self.list_fields:
+                self.update_list(instance)
 
-        for _sub_class in self.dc_fields:
-            self.dc_in_class_mappings[_sub_class].update(getattr(instance, _sub_class.name), self.identifier, instance.index)
-
-
-
-        var_names = [field.name +" = ?" for field in self.basic_fields if field.name != "index"]
-        var_values = [getattr(instance, field.name) for field in self.basic_fields if field.name != "index"]
-        command = "UPDATE {} SET {} WHERE {};"
-        command = command.format(self.table_name,', '.join(var_names), f"id = {instance.index}")
-        
-        self._execute(command, var_values)
-
-        self.conn.commit()
-
-        if self.conn:
-            self.conn.close()
-            self.conn = None
+            for _sub_class in self.dc_fields:
+                self.dc_in_class_mappings[_sub_class].update(getattr(instance, _sub_class.name), self.identifier, instance.index)
 
 
-    #     command = f"UPDATE {self.dc.__name__} SET {''.join(f'{name} = ?,' for name in var_names)}"
-    #     command = command[:-1]  # remove ','
 
-    #     command += f" WHERE {find_by_field} = ?"
+            var_names = [field.name +" = ?" for field in self.basic_fields if field.name != "index"]
+            var_values = [getattr(instance, field.name) for field in self.basic_fields if field.name != "index"]
+            command = "UPDATE {} SET {} WHERE {};"
+            command = command.format(self.table_name,', '.join(var_names), f"id = {instance.index}")
+            
+            self._execute(command, var_values)
 
-    #     # arg_list contains a tuple of values of all objects data to update COMBINED with the key
-    #     arg_list = []
-    #     for instance in instances_of_dc:
-    #         vals = tuple(getattr(instance, field.name) for field in fields(self.dc))
-    #         find_by = (getattr(instance, find_by_field),)
-
-    #         arg_list.append(vals + find_by)
-
-    #     conn = _create_connection(self.db_filename)
-    #     c = conn.cursor()
-    #     c.executemany(command, arg_list)
-    #     conn.commit()
-    #     conn.close()
-
-    # def delete(self, *instances_of_dc):
-    #     var_names = [field.name for field in fields(self.dc) if field.name != "index"]
-    #     command = f"DELETE FROM {self.dc.__name__} WHERE {''.join(f'{name} = ? AND ' for name in var_names)}"
-    #     command = command[:-4]  # remove '? AND' from query
-
-    #     # a list of the tuples containing the value of all objects we want to remove
-    #     val_list = [
-    #         tuple(getattr(instance, var_name) for var_name in var_names)
-    #         for instance in instances_of_dc
-    #     ]
-    #     conn = _create_connection(self.db_filename)
-    #     c = conn.cursor()
-    #     c.executemany(command, val_list)
-    #     conn.commit()
-    #     conn.close()
+            self.conn.commit()

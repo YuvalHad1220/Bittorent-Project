@@ -16,7 +16,7 @@ torrent = torrent_handler.get_torrents()[0]
 torrent.downloaded = 234234
 torrent.connection_info.announce_url = "TEST"
 torrent.peers = []
-torrent_handler.torrent_db.update(torrent)
+torrent_handler.update
 
 
 print(torrent.peers)

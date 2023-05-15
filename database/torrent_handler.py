@@ -17,7 +17,7 @@ class TorrentHandler:
     def add_torrent(self, torrent_obj: Torrent):
         old_index = torrent_obj.index
 
-        self.torrent_db.insert_one(torrent_obj)
+        self.torrent_db.action_to_db(self.torrent_db.insert_one, (torrent_obj, ))
 
         if old_index != torrent_obj.index:
             self.torrent_list.append(torrent_obj)
@@ -26,11 +26,15 @@ class TorrentHandler:
 
     def delete_torrent(self, torrent_obj):
         self.torrent_list.remove(torrent_obj)
-        self.torrent_db.delete(torrent_obj)
+        self.torrent_db.action_to_db(self.torrent_db.delete, (torrent_obj, ))
 
+    def update_torrent(self, torrent_obj):
+        self.torrent_db.action_to_db(self.torrent_db.update, (torrent_obj, ))
+        
     def get_torrents(self):
         return self.torrent_list
 
 
     def update_torrents(self):
-        pass
+        self.torrent_db.action_to_db(self.torrent_db.update_all, (*self.torrent_list, ))
+        
