@@ -33,9 +33,6 @@ class TorrentHandler:
         return self.torrent_list
 
 
-    def update_torrents(self, *torrents):
-        self.torrents_to_update += torrents
-
     def update_loop(self):
         print("started io thread")
         while True:

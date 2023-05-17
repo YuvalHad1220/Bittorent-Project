@@ -15,7 +15,9 @@ MAX_TIME_TO_WAIT = 0.1
 TYPES = {
     "REQUEST": 1,
     "PIECE": 2,
+    "HASH": 3
 }
+
 
 def parse_request(payload):
     return struct.unpack('i b b i i i', payload)
@@ -107,6 +109,17 @@ class downloadHandlerUDP:
         else:
             self.pub_key, self.private_key = None, None
 
+
+
+    async def on_hash_request(self, msg, addr):
+        length, msg_type, info_hash, piece_index, block_offset, block_length, _hash = struct.unpack("! i b 20s i i i 20s", msg)
+        _hash = self.piece_handler.get_hash(piece_index, block_offset, block_length)
+
+        hash_msg = struct.pack("! i b 20s i i i 20s", 20 + 20 + 4 + 4 + 4 + 1, 3, info_hash, piece_index, block_offset, length, _hash)
+
+        self.conn_as_server.send(hash_msg, addr)
+        await self.conn_as_server.drain()
+
     async def main_loop(self):
         self.conn_as_server = await aioudp.open_local_endpoint(*self.self_addr)
         print("started connection as server")
@@ -123,8 +136,10 @@ class downloadHandlerUDP:
             if b'bittorrent' == msg[:10]:
                 await self.on_peer_trying_to_connect(msg, addr)
 
-
             else:
+
+                # Everything done here is done as a connection of server
+
                 connectable = None
                 for conn in self.peer_connections:
                     if conn.peer_addr[0] == addr[0]:
@@ -133,20 +148,20 @@ class downloadHandlerUDP:
 
                 # then maybe its a message from peer with msg_type
                 try:
-                    msg_length, trans_id, msg_type, piece_index, block_offset, block_length = parse_request(msg)
-                    if msg_type == 1:
-                        await self.on_block_request(connectable, addr, trans_id, piece_index, block_offset,
-                                                    block_length)
+                    if msg[4] == 3:
+                        await self.on_hash_request(msg, addr)
+                    else:
+                        msg_length, trans_id, msg_type, piece_index, block_offset, block_length = parse_request(msg)
+                        if msg_type == 1:
+                            await self.on_block_request(connectable, addr, trans_id, piece_index, block_offset,
+                                                        block_length)
 
-                    if msg_type == 2:
-                        await self.on_block_receive(msg, piece_index, msg_length, block_offset, block_length)
-
-                    if msg_type == 3:
-                        # block does not exist, for now in current implementation we just pass
-                        pass
+                        if msg_type == 2:
+                            await self.on_block_receive(msg, piece_index, msg_length, block_offset, block_length)
 
                 except:
                     pass
+
 
             tasks = []
             for connection in self.peer_connections:
@@ -199,9 +214,6 @@ class downloadHandlerUDP:
         if msg_type == 2:
             await self.on_block_receive(msg, piece_index, msg_length, block_offset, block_length)
 
-        if msg_type == 3:
-            # block does not exist, for now in current implementation we just pass
-            pass
 
     async def on_peer_trying_to_connect(self, msg, addr):
         th = TorrentHandler("./database/torrent.db")

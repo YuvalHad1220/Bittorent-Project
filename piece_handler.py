@@ -91,3 +91,11 @@ class PieceHandler:
         return encryption.encrypt_using_public(block_data, public_key)
     
     
+    def get_hash(self, piece_index, block_offset, block_length):
+        with open(self.torrent.download_path, 'rb') as f:
+            byte_pos = piece_index * self.torrent.piece_size_in_bytes + block_offset
+            f.seek(byte_pos)
+            # Read the requested block
+            block_data = f.read(block_length)
+
+        return hashlib.sha1(block_data).digest()
