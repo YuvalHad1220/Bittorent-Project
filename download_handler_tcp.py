@@ -85,6 +85,7 @@ class downloadHandlerTCP:
         self.peer_connections = await self.gather_connectables()
         self.current_peer = self.get_next_peer()
         while True:
+            self.peer_connections += await self.gather_connectables()
             if self.loops_until_answer > 60:
                 print("peer probably hanged on us, going to next peer and resetting stats")
                 self.current_peer = self.get_next_peer()
@@ -157,12 +158,18 @@ class downloadHandlerTCP:
             peer.choked = False
 
     async def gather_connectables(self):
-        tasks = []
-        for peer_addr in self.torrent.peers:
-            if peer_addr[0] in [peer.peer_addr[0] for peer in self.peer_connections]:
-                continue
+        new_peers = []
 
+        for peer in self.peer_connections:
+            peer_ip = peer.peer_addr
+            if peer_ip not in self.torrent.peers:
+                new_peers.append(peer_ip)
+
+        tasks = []
+        for peer_addr in new_peers:
             tasks.append(self.make_handshake(peer_addr))
+
+
         res = await asyncio.gather(*tasks)
         return [item for item in res if item is not None]
 
@@ -237,7 +244,18 @@ class downloadHandlerTCP:
         return None
 
 async def main_loop(settings, torrent_handler):
-    print("running tcp download/upload loop")
     tasks = [downloadHandlerTCP(torrent, settings).main_loop() for torrent in torrent_handler.get_torrents()]
-
     await asyncio.gather(*tasks)
+
+
+if __name__ == "__main__":
+    
+    torrent_handler = TorrentHandler("./database/torrent.db")
+    from trakcer_announce_handler import main_loop as announce_main_loop
+
+    settings = read_settings_file("./settings/settings.json")
+    announce_handler = announce_main_loop(settings, torrent_handler)
+
+    asyncio.run(announce_handler)
+
+    print(torrent_handler.get_torrents()[0])

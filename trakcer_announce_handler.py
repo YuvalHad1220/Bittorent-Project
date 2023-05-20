@@ -63,7 +63,6 @@ def group_by_tracker(torrentx_torrent_list):
 async def udp_loop(legacy_torrent_list, torrentx_torrent_list, settings: Settings):
     to_announce = []
     for torrent in legacy_torrent_list:
-        print(torrent.connection_info.time_to_announce)
 
         if torrent.connection_info.state == torrent_types.wait_to_start:
             to_announce.append(announce_udp_legacy(torrent, announce_types.start, settings))
@@ -94,7 +93,6 @@ async def http_loop(http_torrents_list: List[Torrent], settings: Settings):
     # at every torrent we add, time to announce is also zero so if we dont continue it will perform same task twice; can also be the same at wait to finish and announce resume
     # so we will follow seder kdimuyot
     for torrent in http_torrents_list:
-        print(torrent.connection_info.time_to_announce)
         if torrent.connection_info.state == torrent_types.wait_to_start:
             to_announce.append(announce_http_legacy(torrent, announce_types.start, settings))
 

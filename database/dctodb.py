@@ -6,7 +6,7 @@ import datetime
 
 
 def _create_connection(db_filename) -> sqlite3.Connection:
-    return sqlite3.connect(db_filename)
+    return sqlite3.connect(db_filename, check_same_thread=False)
 
 
 def _split_fields(dc) -> Tuple[List[Any]]:
@@ -166,6 +166,7 @@ class dctodb:
         command = "INSERT INTO {} ({}) VALUES ({});"
         # Remember, we will need to handle dataclasses and lists seperatley so we exclude them from now
         variable_names = [field.name for field in self.basic_fields if field.name != "index"]
+
         variable_values = [getattr(instance, field.name) for field in self.basic_fields if field.name != "index"]
 
         for var_name, var_value in extra_columns.items():

@@ -74,4 +74,4 @@ def homepage():
 
 if __name__ == "__main__":
     print("running app thread")
-    app.run(port=12345, debug=False)
+    app.run(port=12345, debug=False)    

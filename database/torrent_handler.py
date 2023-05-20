@@ -17,7 +17,7 @@ class TorrentHandler:
     def add_torrent(self, torrent_obj: Torrent):
         old_index = torrent_obj.index
 
-        self.torrent_db.action_to_db(self.torrent_db.insert_one, (torrent_obj, ))
+        self.torrent_db.action_to_db(self.torrent_db.insert_one, torrent_obj)
 
         if old_index != torrent_obj.index:
             self.torrent_list.append(torrent_obj)
@@ -26,7 +26,7 @@ class TorrentHandler:
 
     def delete_torrent(self, torrent_obj):
         self.torrent_list.remove(torrent_obj)
-        self.torrent_db.action_to_db(self.torrent_db.delete, (torrent_obj, ))
+        self.torrent_db.action_to_db(self.torrent_db.delete, torrent_obj)
 
 
     def get_torrents(self):
@@ -36,5 +36,6 @@ class TorrentHandler:
     def update_loop(self):
         print("started io thread")
         while True:
-            self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
+            print("updated torrents in db")
+            # self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
             time.sleep(1)
