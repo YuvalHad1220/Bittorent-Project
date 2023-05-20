@@ -250,7 +250,8 @@ def build_conn_struct(settings: Settings, is_torrentX = False):
     # 1 empty byte
     action = 0  # Connect action
     trans_id = settings.random_id[:4].encode()
-    return struct.pack("! q l 4s x", PROT_ID if not is_torrentX else PROT_ID + 1, action, trans_id)
+    prot_id =  PROT_ID if not is_torrentX else PROT_ID + 1
+    return struct.pack("! q l 4s x", prot_id, action, trans_id)
 
 
 def vaildated_conn_id(message):
@@ -311,7 +312,7 @@ def begin_torrentx_announce_struct(settings: Settings, conn_id, trans_id):
     # trans_id - 4 bytes
     # peer_id - 12 bytes
     # port - 2 bytes
-    return struct.pack("! q i 12s h", conn_id, trans_id, settings.peer_id, settings.port)    
+    return struct.pack("! q 4s 12s h", conn_id, trans_id, settings.peer_id.encode(), settings.port)    
 
 
 def torrentx_announce_struct(torrent: Torrent, announce_event):
@@ -322,22 +323,24 @@ def torrentx_announce_struct(torrent: Torrent, announce_event):
     # 4 bytes - uploaded
     # 1 byte - announce type
 
-
-
-    
     return struct.pack("! 20s i i i i b", torrent.info_hash, torrent.connection_info.seeders, torrent.connection_info.leechers, torrent.downloaded, torrent.uploaded, announce_event)
 
 async def announce_udp_torrentx(torrents_of_same_tracker: List[Torrent], settings: Settings):
     if not torrents_of_same_tracker:
         return
+    torrents_of_same_tracker = [torrent for torrent in torrents_of_same_tracker if (torrent.connection_info.state in (torrent_types.wait_to_start, torrent_types.finished) and torrent.connection_info.time_to_announce <= 0)]
+    if not torrents_of_same_tracker:
+        return
     
-
+    
     handshake_msg = build_conn_struct(settings, True)
     announce_data = torrents_of_same_tracker[0].connection_info.announce_url
     announce_data = announce_data.replace("udp://", "")
     announce_url, port = announce_data.split(":")
     port = int(port)
     addr = (announce_url, port)
+
+    
 
     resp, remote_conn = await init_conn(handshake_msg, addr)
 
@@ -346,8 +349,6 @@ async def announce_udp_torrentx(torrents_of_same_tracker: List[Torrent], setting
     announce_struct = begin_torrentx_announce_struct(settings, conn_id, trans_id)
 
 
-    torrents_of_same_tracker = [torrent for torrent in torrents_of_same_tracker if (torrent.connection_info.state in (torrent_types.wait_to_start, torrent_types.finished) and 
-    torrent.connection_info.time_to_announce <= 0)]
 
 
     if len(torrents_of_same_tracker) > 112:
@@ -356,28 +357,37 @@ async def announce_udp_torrentx(torrents_of_same_tracker: List[Torrent], setting
 
     torrents_to_announce = [(torrent, match_announce_to_torrent(torrent)) for torrent in torrents_of_same_tracker]
 
+    for torrent, event in torrents_to_announce:
+        print(torrentx_announce_struct(torrent, event))
+        announce_struct += torrentx_announce_struct(torrent, event)
 
     remote_conn.send(announce_struct)
     await remote_conn.drain()
 
+
     resp = await remote_conn.receive()
-
     remote_conn.close()
-
+ 
     conn_id, trans_id, interval = torrentx_parse_answer(resp[:16])
     read_from = 0
     for torrent, announce_event in torrents_to_announce:
         torrent.connection_info.time_to_announce = interval
         torrent.connection_info.seeders, torrent.connection_info.leechers, torrent.peers, bytes_read = torrentx_parse_answer_for_torrent(resp[16:], read_from)
 
-        if announce_event == announce_types.start:
+        if announce_event == ANNOUNCE_TABLE_UDP["START"]:
             torrent.connection_info.state = torrent_types.started
 
-        if announce_event == announce_types.finish:
+        if announce_event == ANNOUNCE_TABLE_UDP["FINISH"]:
             torrent.connection_info.state = torrent_types.finished
 
             
         read_from += bytes_read
+
+        print(torrent)
+
+    print("finished!")
+
+
 
 def torrentx_parse_answer_for_torrent(resp, read_from):
     # 4 bytes - seeders
@@ -401,14 +411,13 @@ def torrentx_parse_answer_for_torrent(resp, read_from):
     return seeders, leechers, peer_list, bytes_read 
     
 def match_announce_to_torrent(torrent):
-
     if torrent.connection_info.state == torrent_types.wait_to_start:
-        return announce_types.start
+        return ANNOUNCE_TABLE_UDP["START"]
         
     elif torrent.connection_info.state == torrent_types.wait_to_finish:
-        return announce_types.finish
+        return ANNOUNCE_TABLE_UDP["FINISH"]
     
-    return announce_types.resume
+    return ANNOUNCE_TABLE_UDP["RESUME"]
     
 
 def torrentx_parse_answer(resp):
@@ -417,3 +426,13 @@ def torrentx_parse_answer(resp):
     # 4 bytes interval
 
     return struct.unpack("! q i i", resp)
+
+
+if __name__ == "__main__":
+    from settings.settings import read_settings_file
+    from database.torrent_handler import TorrentHandler
+    torrent_handler = TorrentHandler("./database/torrent.db")
+    settings = read_settings_file("./settings/settings.json")
+    announce_handler = main_loop(settings, torrent_handler)
+
+    asyncio.run(announce_handler)

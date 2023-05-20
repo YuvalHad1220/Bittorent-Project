@@ -36,6 +36,6 @@ class TorrentHandler:
     def update_loop(self):
         print("started io thread")
         while True:
-            print("updated torrents in db")
-            self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
+            # print("updated torrents in db")
+            # self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
             time.sleep(1)
