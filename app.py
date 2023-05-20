@@ -12,7 +12,6 @@ SUCCESS = {"success": True}
 FAILURE = {"success": False}
 
 torrent_handler = TorrentHandler("./database/torrent.db")
-
 settings = read_settings_file("./settings/settings.json")
 announce_handler = announce_main_loop(settings, torrent_handler)
 udp_handler = udp_main_loop(settings, torrent_handler)

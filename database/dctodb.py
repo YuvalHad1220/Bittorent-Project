@@ -129,10 +129,17 @@ class dctodb:
         if not self.conn:
             self.conn = _create_connection(self.db_filename)
         cur = self.conn.cursor()
-        if args:
-            res = cur.execute(command, args)
-        else:
-            res = cur.execute(command)
+
+        try:
+            if args:
+                res = cur.execute(command, args)
+            else:
+                res = cur.execute(command)
+        except sqlite3.ProgrammingError:
+            print(args)
+            print(command)
+            import sys
+            sys.exit(1)
 
         return res
 
@@ -149,14 +156,14 @@ class dctodb:
             list_of_items = getattr(instance, list_field.name)
             for item in list_of_items:
                 item_as_obj = self.lists_in_class_mappings[list_field].dc(instance.index, item)
-                self.lists_in_class_mappings[list_field].insert_one(item_as_obj)
+                self.lists_in_class_mappings[list_field].insert_one(item_as_obj, keep_index = True)
 
     def _insert_dcs(self, instance):
         for field in self.dc_fields:
             instance_dc_value = getattr(instance, field.name)
             self.dc_in_class_mappings[field].insert_one(instance_dc_value, {self.identifier: instance.index})
 
-    def insert_one(self, instance, extra_columns: Dict[str, Any] = dict()):
+    def insert_one(self, instance, keep_index = False, extra_columns: Dict[str, Any] = dict()):
         """
         A potentially mega function, we want that function to insert one item (and update its value). if it has extra columns, obviously we need to insert them as well.
         Extra columns is a dict: {col_name: col_value}
@@ -165,11 +172,20 @@ class dctodb:
 
         command = "INSERT INTO {} ({}) VALUES ({});"
         # Remember, we will need to handle dataclasses and lists seperatley so we exclude them from now
+        
         variable_names = [field.name for field in self.basic_fields if field.name != "index"]
 
-        print(type(self.basic_fields))
-        print(type(instance))
+        if instance.index == 0:
+            keep_index = False
+
+
+        if keep_index:
+            variable_names = ["id"] + variable_names
+
+        
         variable_values = [getattr(instance, field.name) for field in self.basic_fields if field.name != "index"]
+        if keep_index:
+            variable_values = [getattr(instance, "index")] + variable_values
 
         for var_name, var_value in extra_columns.items():
             variable_names.append(var_name)
@@ -236,7 +252,6 @@ class dctodb:
         command = command.format(self.table_name, condition)
         res = self._execute(command)
         rows = res.fetchall()
-
         for row in rows:
             index = row[0]
             basic_args = row[1:]
@@ -287,7 +302,8 @@ class dctodb:
         dc_childs = dict()
 
         for dc_field, connector in self.dc_in_class_mappings.items():
-            dc_childs[dc_field] = connector.fetch_where(f'{self.identifier} == {self_index}')[0]
+                dc_childs[dc_field] = connector.fetch_where(f'{self.identifier} == {self_index}')
+
 
         return dc_childs
 
@@ -313,6 +329,7 @@ class dctodb:
 
         else:
             self._execute(f"DELETE FROM {self.table_name} WHERE id = ?", (instance.index,))
+        
         self.conn.commit()
 
 

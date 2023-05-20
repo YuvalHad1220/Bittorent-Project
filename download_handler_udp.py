@@ -300,6 +300,5 @@ class downloadHandlerUDP:
 
 async def main_loop(settings, torrent_handler):
     print("running udp download/upload loop")
-    tasks = [downloadHandlerUDP(torrent, settings).main_loop() for torrent in torrent_handler.get_torrents()]
-
+    tasks = [downloadHandlerUDP(torrent, settings).main_loop() for torrent in torrent_handler.get_torrents() if torrent.is_torrentx]
     await asyncio.gather(*tasks)

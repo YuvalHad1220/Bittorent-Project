@@ -37,5 +37,5 @@ class TorrentHandler:
         print("started io thread")
         while True:
             # print("updated torrents in db")
-            # self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
+            self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
             time.sleep(1)

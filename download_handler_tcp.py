@@ -73,22 +73,31 @@ class downloadHandlerTCP:
         self.current_peer = self.get_next_peer()
         while True:
             self.peer_connections += await self.gather_connectables()
-            if self.loops_until_answer > 60:
-                print("peer probably hanged on us, going to next peer and resetting stats")
-                self.current_peer = self.get_next_peer()
-                self.loops_until_answer = 0
-                self.pending = False
+            
+            if self.current_peer is not None:
+                await self.handle_msg(self.current_peer)
 
-            await self.handle_msg(self.current_peer)
+                if self.piece_handler.downloading:
+                    if self.loops_until_answer > 60:
+                        if self.piece_handler.needed_piece_to_download_index == len(self.torrent.pieces_hashes_list) - 1:
+                            print("thinking we got no response because we finished downloading")
+                            # for i in range(len(self.current_piece_data)):
+                            #     if self.piece_handler.validate_piece(self.current_piece_data[:self.block_offset]):
+                            #         self.piece_handler.on_validated_piece(self.current_piece_data[:self.block_offset], self.piece_handler.needed_piece_to_download_index)
+                            #         import sys
+                            #         sys.exit(2)
+                        print("peer probably hanged on us, going to next peer and resetting stats")
+                        self.current_peer = self.get_next_peer()
+                        self.loops_until_answer = 0
+                        self.pending = False
 
-            if self.piece_handler.downloading:
-                self.loops_until_answer += 1
-                if not self.pending:
-                    await self.request_block(self.piece_handler.needed_piece_to_download_index, self.block_offset)
-                    self.pending = True
-                    print(
-                        f"PROGRESS IN PIECE: {round(100 * self.block_offset / self.torrent.piece_size_in_bytes, 2)}")
-                    print(self.block_offset, self.torrent.piece_size_in_bytes)
+                    self.loops_until_answer += 1
+                    if not self.pending:
+                        await self.request_block(self.piece_handler.needed_piece_to_download_index, self.block_offset)
+                        self.pending = True
+                        print(
+                            f"PROGRESS IN PIECE: {round(100 * self.block_offset / self.torrent.piece_size_in_bytes, 2)}")
+                        print(self.block_offset, self.torrent.piece_size_in_bytes)
 
             await asyncio.sleep(MAX_TIME_TO_WAIT)
 
@@ -185,6 +194,10 @@ class downloadHandlerTCP:
         self.pending = False
 
     def get_next_peer(self):
+
+        if not self.peer_connections:
+            return None
+
         self.current_peer_index += 1
         print(f"returning peer index: {self.current_peer_index} ")
 
@@ -222,23 +235,25 @@ class downloadHandlerTCP:
 
 
         print("total size now: ",  self.piece_handler.downloaded_size() + self.block_offset + block_length)
-        print("torrent size : ",  self.torrent.size)
+        print("torrent size  : ",  self.torrent.size)
         if self.block_offset + block_length >= self.torrent.piece_size_in_bytes or self.piece_handler.downloaded_size() + self.block_offset + block_length >= self.torrent.size:
             return self.on_maybe_piece()
 
         return None
 
 async def main_loop(settings, torrent_handler):
-    old_tasks = []
+    old_torrents = []
     while True:
         new_tasks = []
         for torrent in torrent_handler.get_torrents():
-            if torrent not in old_tasks:
+            if torrent.is_torrentx:
+                continue
+
+            if torrent not in old_torrents:
                 new_tasks.append(downloadHandlerTCP(torrent, settings).main_loop())
+                old_torrents.append(torrent)
             
         threading.Thread(target=_run, args=(new_tasks, )).start()
-        old_tasks += new_tasks
-
         time.sleep(5)
 
 def _run(tasks):
