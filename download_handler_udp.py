@@ -7,7 +7,9 @@ import aioudp
 from settings.settings import Settings
 from typing import List
 import encryption
-import socket
+# import socket
+import threading
+import time
 
 BLOCK_SIZE = 0xf000
 MAX_TIME_TO_WAIT = 0.1
@@ -16,6 +18,8 @@ TYPES = {
     "PIECE": 2,
     "HASH": 3
 }
+
+self_addr = ("192.168.1.41", 25565)
 
 
 def parse_request(payload):
@@ -102,8 +106,8 @@ class downloadHandlerUDP:
         self.downloaded_piece = False
         self.validated_piece = False
 
-        self.self_addr = (socket.gethostbyname(socket.getfqdn()) , settings.port)
-
+        #self.self_addr = (socket.gethostbyname(socket.getfqdn()) , settings.port)
+        self.self_addr = self_addr
         if settings.download_torrentx_encryption:
             self.pub_key, self.private_key = encryption.create_key_pairs()
         else:
@@ -185,11 +189,15 @@ class downloadHandlerUDP:
 
     async def gather_connectables(self):
         for peer_addr in self.torrent.peers:
-            if peer_addr not in [peers.peer_addr for peers in self.peer_connections]:
-                res = await connect_to_peer(peer_addr, self.pub_key)
-                if res:
-                    print("added new peer")
-                    self.peer_connections.append(res)
+            if peer_addr.split(":")[0] == self.self_addr[0]:
+                continue
+
+
+            print("trying to connect to:", peer_addr)
+            res = await connect_to_peer(peer_addr, self.pub_key)
+            if res:
+                print("added new peer")
+                self.peer_connections.append(res)
 
     async def listen_for_msg(self, connectable: connectableUDP):
         try:
@@ -216,7 +224,11 @@ class downloadHandlerUDP:
 
 
     async def on_peer_trying_to_connect(self, msg, addr):
-        th = TorrentHandler("./database/torrent.db")
+        th = TorrentHandler("torrent.db")
+        if (addr[0] == self.self_addr[0]):
+            return
+        
+        print("addr:", addr)
         trans_id = 1
         for torrent in th.get_torrents():
             addrs = [addr for addr, port in torrent.peers]
@@ -297,8 +309,36 @@ class downloadHandlerUDP:
                     connection.conn_with_peer.send(block_req_message, connection.peer_addr)
                     await connection.conn_with_peer.drain()
 
-
 async def main_loop(settings, torrent_handler):
-    print("running udp download/upload loop")
-    tasks = [downloadHandlerUDP(torrent, settings).main_loop() for torrent in torrent_handler.get_torrents() if torrent.is_torrentx]
+    old_torrents = []
+    while True:
+        new_tasks = []
+        for torrent in torrent_handler.get_torrents():
+            if not torrent.is_torrentx:
+                continue
+
+            if torrent not in old_torrents:
+                new_tasks.append(downloadHandlerUDP(torrent, settings).main_loop())
+                old_torrents.append(torrent)
+            
+        threading.Thread(target=_run, args=(new_tasks, )).start()
+        time.sleep(5)
+
+def _run(tasks):
+    asyncio.run(__run(tasks))
+
+async def __run(tasks):
     await asyncio.gather(*tasks)
+if __name__ == "__main__":
+    from settings.settings import read_settings_file, Settings
+
+    torrent_handler = TorrentHandler("torrent.db")
+    from trakcer_announce_handler import main_loop as announce_main_loop
+
+    settings = read_settings_file("./settings/settings.json")
+    announce_handler = announce_main_loop(settings, torrent_handler)
+
+    asyncio.run(announce_handler)
+
+    torrent1 = torrent_handler.get_torrents()[0]
+    asyncio.run(main_loop(settings, torrent_handler))
