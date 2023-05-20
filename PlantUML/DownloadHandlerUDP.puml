@@ -33,6 +33,7 @@ class downloadHandlerTCP {
   + gather_connectables(): coroutine
   + on_block(msg_len, payload): None
   + get_next_peer(): None
+  + on_hash_request(): None
   + write_data_to_block(piece_index, block_offset, block_length, block): None
 }
 connectableTCP -> downloadHandlerTCP : peer_connections

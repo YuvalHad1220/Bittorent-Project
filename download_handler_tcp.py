@@ -1,7 +1,8 @@
 import struct
 from typing import List
 
-import trakcer_announce_handler
+import time
+import threading
 from database.torrent_handler import TorrentHandler
 from piece_handler import PieceHandler
 from settings.settings import read_settings_file, Settings
@@ -61,27 +62,13 @@ class downloadHandlerTCP:
 
 
         except (TimeoutError, ConnectionResetError):
+            print("conn error")
             peer_writer.close()
             await peer_writer.wait_closed()
             return None
 
-    async def handle_client(self, reader, writer):
-        # Read data from the client
-        data = await reader.read(1024)
-        message = data.decode()
-        print(f'Received message: {message!r}')
-
-        # Send a response back to the client
-        response = f'Echoing message: {message}'
-        writer.write(response.encode())
-        await writer.drain()
-
-        # Close the connection
-        writer.close()
 
     async def main_loop(self):
-        self.server = await asyncio.start_server(self.handle_client, *self.self_addr)
-        print("started connection as server")
         self.peer_connections = await self.gather_connectables()
         self.current_peer = self.get_next_peer()
         while True:
@@ -160,10 +147,10 @@ class downloadHandlerTCP:
     async def gather_connectables(self):
         new_peers = []
 
-        for peer in self.peer_connections:
-            peer_ip = peer.peer_addr
-            if peer_ip not in self.torrent.peers:
-                new_peers.append(peer_ip)
+        old_peer_ips = [peer.peer_addr for peer in self.peer_connections]
+        total_peers = self.torrent.peers
+
+        new_peers = {peer for peer in total_peers if peer not in old_peer_ips}
 
         tasks = []
         for peer_addr in new_peers:
@@ -205,6 +192,20 @@ class downloadHandlerTCP:
             self.current_peer_index = 0
         return self.peer_connections[self.current_peer_index]
 
+    def on_maybe_piece(self):
+        print(f"think we downloaded")
+        with open("current_piece", 'wb') as f:
+            f.write(self.current_piece_data)
+        if self.piece_handler.validate_piece(self.current_piece_data):
+            self.piece_handler.on_validated_piece(self.current_piece_data,
+                                                    self.piece_handler.needed_piece_to_download_index)
+            return True
+
+        else:
+            print("piece not validated")
+            return False
+
+
     def write_data_to_block(self, piece_index, block_offset, block_length, block):
         if piece_index != self.piece_handler.needed_piece_to_download_index:
             # something went wrong in reading that message so we want it all over again
@@ -212,41 +213,39 @@ class downloadHandlerTCP:
 
         for i in range(block_length):
             if block_offset + i >= len(self.current_piece_data):
-                # when we downloaded all piece
-                print(f"think we downloaded")
-                with open("current_piece", 'wb') as f:
-                    f.write(self.current_piece_data)
-                if self.piece_handler.validate_piece(self.current_piece_data):
-                    print("piece hash validated")
-                    return True
-                else:
-                    return False
-
+                return self.on_maybe_piece()
             else:
                 if i < len(block):
                     self.current_piece_data[i + self.block_offset] = block[i]
                 else:
                     self.current_piece_data[i + self.block_offset] = 0
 
-        if self.block_offset + block_length == self.torrent.piece_size_in_bytes:
-            print(f"think we downloaded")
-            with open("current_piece", 'wb') as f:
-                f.write(self.current_piece_data)
-            if self.piece_handler.validate_piece(self.current_piece_data):
-                self.piece_handler.on_validated_piece(self.current_piece_data,
-                                                      self.piece_handler.needed_piece_to_download_index)
-                return True
 
-            else:
-                print("piece not validated")
-                return False
+        print("total size now: ",  self.piece_handler.downloaded_size() + self.block_offset + block_length)
+        print("torrent size : ",  self.torrent.size)
+        if self.block_offset + block_length >= self.torrent.piece_size_in_bytes or self.piece_handler.downloaded_size() + self.block_offset + block_length >= self.torrent.size:
+            return self.on_maybe_piece()
 
         return None
 
 async def main_loop(settings, torrent_handler):
-    tasks = [downloadHandlerTCP(torrent, settings).main_loop() for torrent in torrent_handler.get_torrents()]
-    await asyncio.gather(*tasks)
+    old_tasks = []
+    while True:
+        new_tasks = []
+        for torrent in torrent_handler.get_torrents():
+            if torrent not in old_tasks:
+                new_tasks.append(downloadHandlerTCP(torrent, settings).main_loop())
+            
+        threading.Thread(target=_run, args=(new_tasks, )).start()
+        old_tasks += new_tasks
 
+        time.sleep(5)
+
+def _run(tasks):
+    asyncio.run(__run(tasks))
+
+async def __run(tasks):
+    await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     
@@ -258,4 +257,6 @@ if __name__ == "__main__":
 
     asyncio.run(announce_handler)
 
-    print(torrent_handler.get_torrents()[0])
+    torrent1 = torrent_handler.get_torrents()[0]
+    print(torrent1.peers)
+    asyncio.run(main_loop(settings, torrent_handler))

@@ -2,11 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="01a8ddf7-68fc-4aa3-9894-946d371b76b0" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database/dctodb.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/dctodb.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database/torrent.db" beforeDir="false" afterPath="$PROJECT_DIR$/database/torrent.db" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/settings/settings.json" beforeDir="false" afterPath="$PROJECT_DIR$/settings/settings.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PlantUML/DownloadHandlerUDP.puml" beforeDir="false" afterPath="$PROJECT_DIR$/PlantUML/DownloadHandlerUDP.puml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PlantUML/ThreadHandlerUML.puml" beforeDir="false" afterPath="$PROJECT_DIR$/PlantUML/ThreadHandlerUML.puml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PlantUML/TrackerUsers.puml" beforeDir="false" afterPath="$PROJECT_DIR$/PlantUML/TrackerUsers.puml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PlantUML/announceUDP.puml" beforeDir="false" afterPath="$PROJECT_DIR$/PlantUML/announceUDP.puml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PlantUML/loghandler.puml" beforeDir="false" afterPath="$PROJECT_DIR$/PlantUML/loghandler.puml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -16,8 +16,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="UML Sequence" />
         <option value="Python Script" />
+        <option value="UML Sequence" />
       </list>
     </option>
   </component>

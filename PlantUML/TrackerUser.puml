@@ -1,0 +1,11 @@
+@startuml
+class User {
+  - addr: str
+  - fake_ratio: int = 0
+  - test_successes: float = 0
+  - test_failures: int = 0
+  - index: int = 0
+
+  + add_test(test_res: bool): void
+}
+@enduml

@@ -2,6 +2,7 @@ from torrent import Torrent
 import pathlib
 import hashlib
 import encryption
+import os
 from utils import torrent_types
 
 class PieceHandler:
@@ -28,16 +29,22 @@ class PieceHandler:
         That function will save the validated piece into memory. once we have all validated pieces only then we will construct files from them
         """
 
-        with open(self.save_path / f"{self.needed_piece_to_download_index()}.piece", 'wb') as f:
+        with open(self.save_path / f"{self.needed_piece_to_download_index}.piece", 'wb') as f:
             f.write(validated_piece)
             self.downloaded_pieces[piece_index] = 1
 
 
-        self.torrent.downloaded += self.torrent.piece_size_in_bytes
+        self.torrent.downloaded = self.downloaded_size()
 
-        if self.torrent.downloaded >= self.torrent.size():
+        if self.torrent.downloaded >= self.torrent.size:
             self.on_download_finish()
 
+    def downloaded_size(self):
+        downloaded = 0
+        for filename in self.save_path.glob('*'):
+            downloaded += os.path.getsize(filename)
+
+        return downloaded
 
     @property
     def needed_piece_to_download_index(self):

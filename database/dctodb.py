@@ -167,6 +167,8 @@ class dctodb:
         # Remember, we will need to handle dataclasses and lists seperatley so we exclude them from now
         variable_names = [field.name for field in self.basic_fields if field.name != "index"]
 
+        print(type(self.basic_fields))
+        print(type(instance))
         variable_values = [getattr(instance, field.name) for field in self.basic_fields if field.name != "index"]
 
         for var_name, var_value in extra_columns.items():

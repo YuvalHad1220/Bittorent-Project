@@ -1,13 +1,18 @@
 @startuml
 class LogHandler {
-- torrent_db: dctodb
-- torrent_list: List[TorrentLog]
+  - torrent_db
+  - torrent_list
+  - user_db
+  - user_list
 
-
-+ init(db_filename: str)
-+ add_torrent_log(torrent_log: TorrentLog): bool
-+ update_torrent_log(torrent_log: TorrentLog): bool
+  + __init__(db_filename) -> None
+  + add_torrent(torrent_log: TorrentLog) -> bool
+  + add_user(user: User) -> bool
+  + get_users() -> List[User]
+  + delete_torrent(to_delete) -> None
+  + get_torrents() -> List[TorrentLog]
+  + find_by_ip(ip) -> str
+  + _update_loop() -> None
+  + start_update_loop() -> None
 }
-
-
 @enduml

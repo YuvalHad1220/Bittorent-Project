@@ -1,10 +1,20 @@
 @startuml
-class announceUDP {
-    +parse_announce_struct(payload: bytes) -> Dict[str, Union[str, int]]
-    +on_msg(payload: bytes, addr: Tuple[str, int]) -> None
-    +construct_response(trans_id: bytes, torrent: TorrentLog, announcer_torrent_addr: Tuple[str, int]) -> bytes
-    +random_bytes(length: int) -> bytes
-    +validate_conn_request(payload: bytes) -> None
-    +main() -> None
+class AnnounceTest {
+  - torrent: TorrentLog
+  - leechers_threshold: int
+  - seeders_threshold: int
+  - torrent_user_handler
+
+  + __init__(torrent: TorrentLog, torrent_user_handler) -> None
+  + gather_hashes_for_torrent_test() -> Coroutine
+  + leecherUploadTest() -> None
+  + seederDownloadTest() -> None
+  + downloadChangeTooFast() -> None
+  + uploadChangeTooFast() -> None
+  + gen_piece_hash_struct(torrent, index, offset, length) -> None
+  + ask_and_wait_for_hash(peer_addr, piece_hash_msg) -> Coroutine
+  + get_announcements_in_a_row_with_matching_attribute(announce_log_list: List[AnnounceLog], attr: str, value: str) -> List[List[AnnounceLog]]
+  + calculate_time_difference_seconds(announce_log1: AnnounceLog, announce_log2: AnnounceLog) -> int
+  + main_loop(torrents) -> Coroutine
 }
 @enduml

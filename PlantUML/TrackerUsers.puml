@@ -1,20 +1,23 @@
 @startuml
-
 class User {
--addr
--torrents_in_share
-+init(addr)
-+add_torrent(torrent_name)
+  - addr: str
+  - fake_ratio: int = 0
+  - test_successes: int = 0
+  - test_failures: int = 0
+  - index: int = 0
+
+  + add_test(test_res) -> None
 }
 
 class Users {
--log_handler
-+init(log_handler)
-+build_user_list_from_torrents()
-+users_test()
+  - torrent_log_and_user_handler
+
+  + __init__(torrent_log_and_user_handler) -> None
+  + build_user_dict_from_torrents() -> Dict[User, List[TorrentLog]]
+  + return_json(users_dict) -> List[Dict[str, Any]]
 }
 
+Users -> User
 
-Users --> User
 
 @enduml
