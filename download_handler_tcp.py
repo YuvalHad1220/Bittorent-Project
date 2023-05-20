@@ -3,7 +3,7 @@ from typing import List
 
 import time
 import threading
-from database.torrent_handler import TorrentHandler
+from torrent_handler import TorrentHandler
 from piece_handler import PieceHandler
 from settings.settings import read_settings_file, Settings
 from torrent import Torrent

@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from settings.settings import read_settings_file
 from app_operations import *
-from database.torrent_handler import TorrentHandler
+from torrent_handler import TorrentHandler
 from utils import get_client_list
 from download_handler_tcp import main_loop as tcp_main_loop
 from download_handler_udp import main_loop as udp_main_loop
@@ -11,7 +11,7 @@ from thread_handler import ThreadHandler
 SUCCESS = {"success": True}
 FAILURE = {"success": False}
 
-torrent_handler = TorrentHandler("./database/torrent.db")
+torrent_handler = TorrentHandler("torrent.db")
 settings = read_settings_file("./settings/settings.json")
 announce_handler = announce_main_loop(settings, torrent_handler)
 udp_handler = udp_main_loop(settings, torrent_handler)

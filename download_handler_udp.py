@@ -1,6 +1,5 @@
 import struct
-
-from database.torrent_handler import TorrentHandler
+from torrent_handler import TorrentHandler
 import asyncio
 from torrent import Torrent
 from piece_handler import PieceHandler

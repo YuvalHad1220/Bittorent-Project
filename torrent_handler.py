@@ -1,4 +1,4 @@
-from database.dctodb import dctodb
+from dctodb import dctodb
 from torrent import Torrent
 import time
 
@@ -37,5 +37,12 @@ class TorrentHandler:
         print("started io thread")
         while True:
             # print("updated torrents in db")
-            self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
+            # self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
             time.sleep(1)
+
+
+
+
+if __name__ == "__main__":
+    torrent_handler = TorrentHandler("torrent.db")
+    print(torrent_handler.get_torrents())

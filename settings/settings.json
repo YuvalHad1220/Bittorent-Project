@@ -1,9 +1,9 @@
 {
-    "default_download_path": "/home/t480s/Downloads",
-    "default_file_archive_path": "/home/t480s/Desktop/Bittorent-Project/FileArchive",
+    "default_download_path": "C:/Users/Yuval Hadar/Downloads",
+    "default_file_archive_path": "C:/Users/Yuval Hadar/Desktop/Bittorent-My_Project/FileArchive",
     "download_torrentx_encryption": true,
     "user_agent": "-qB4450-",
-    "random_id": "m8nxcfwFJsXh",
+    "random_id": "9VSnkckjFoUi",
     "peer_id": "qBittorrent/4.4.5",
     "port": 25565,
     "size_calc": "SI"

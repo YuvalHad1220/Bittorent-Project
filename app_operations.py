@@ -1,7 +1,7 @@
 from flask import Request
 from torrent import create_torrent
 from utils import return_path
-from database.torrent_handler import TorrentHandler
+from torrent_handler import TorrentHandler
 import os
 from utils import create_torrent_file_from_directory, create_torrent_file_from_single_file
 def handle_torrent(request: Request, torrent_handler: TorrentHandler):

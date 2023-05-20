@@ -41,7 +41,6 @@ def split_udp(udp_list):
 def split_torrent_list(torrent_list: List[Torrent]):
     udp_torrents = []
     http_torrents = []
-
     for torrent in torrent_list:
         if "udp://" in torrent.connection_info.announce_url:
             udp_torrents.append(torrent)
@@ -430,7 +429,7 @@ def torrentx_parse_answer(resp):
 
 if __name__ == "__main__":
     from settings.settings import read_settings_file
-    from database.torrent_handler import TorrentHandler
+    from torrent_handler import TorrentHandler
     torrent_handler = TorrentHandler("./database/torrent.db")
     settings = read_settings_file("./settings/settings.json")
     announce_handler = main_loop(settings, torrent_handler)
