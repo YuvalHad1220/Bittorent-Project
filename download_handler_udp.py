@@ -57,7 +57,8 @@ class connectableUDP:
 
 
 async def connect_to_peer(peer_addr, public_key=None):
-    conn_with_peer = await aioudp.open_remote_endpoint(*peer_addr)
+    ip, port = peer_addr.split(':')
+    conn_with_peer = await aioudp.open_remote_endpoint(host=ip, port=port)
     msg = b'bittorrent'
     if public_key:
         msg += public_key
@@ -71,7 +72,7 @@ async def connect_to_peer(peer_addr, public_key=None):
         return connectableUDP(peer_addr, conn_with_peer, trans_id, public_key)
 
 
-    except TimeoutError:
+    except (TimeoutError, OSError):
         return None
 
 
