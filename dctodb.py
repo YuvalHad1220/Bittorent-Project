@@ -162,11 +162,12 @@ class dctodb:
         Extra columns is a dict: {col_name: col_value}
         After we updated our own index, we can proceed to enter fields like dcs and lists
         """
-
+        
         command = "INSERT INTO {} ({}) VALUES ({});"
         # Remember, we will need to handle dataclasses and lists seperatley so we exclude them from now
         variable_names = [field.name for field in self.basic_fields if field.name != "index"]
 
+        
         variable_values = [getattr(instance, field.name) for field in self.basic_fields if field.name != "index"]
 
         for var_name, var_value in extra_columns.items():
@@ -177,13 +178,16 @@ class dctodb:
 
         _ = self._execute(command, variable_values)
         res = self.conn.commit()
-        instance.index = self._get_count()
+        
+        if instance.index == 0:
+            instance.index = self._get_count()
 
         if self.dc_in_class_mappings:
             self._insert_dcs(instance)
         if self.lists_in_class_mappings:
             self._insert_list(instance)
-        
+
+
 
     def fetch_all(self) -> List[Tuple[Any, Union[Dict, None]]]:
         """
@@ -285,6 +289,7 @@ class dctodb:
         dc_childs = dict()
 
         for dc_field, connector in self.dc_in_class_mappings.items():
+            print(f'{self.identifier} == {self_index} {dc_field.name}')
             dc_childs[dc_field] = connector.fetch_where(f'{self.identifier} == {self_index}')[0]
 
         return dc_childs
@@ -330,27 +335,24 @@ class dctodb:
     """
 
 
-    def update_list(self, instance):
+    def update_list(self, instance, parent_index):
         for list_field in self.list_fields:
-            lists = self.lists_in_class_mappings[list_field].fetch_where(f"{self.identifier} == {instance.index}")
+            lists = self.lists_in_class_mappings[list_field].fetch_where(f"{self.identifier} == {parent_index}")
             for list_item in lists:
                 self.lists_in_class_mappings[list_field].delete(list_item, self.identifier, instance.index)
-            
+        
         self._insert_list(instance)
-
 
 
 
 
     def update(self, *instances):
         for instance in instances:
+            for sub_class_field in self.dc_fields:
+                self.dc_in_class_mappings[sub_class_field].update(getattr(instance, sub_class_field.name))
+
             if self.list_fields:
-                self.update_list(instance)
-
-            for _sub_class in self.dc_fields:
-                self.dc_in_class_mappings[_sub_class].update(getattr(instance, _sub_class.name), self.identifier, instance.index)
-
-
+                self.update_list(instance, instance.index)
 
             var_names = [field.name +" = ?" for field in self.basic_fields if field.name != "index"]
             var_values = [getattr(instance, field.name) for field in self.basic_fields if field.name != "index"]

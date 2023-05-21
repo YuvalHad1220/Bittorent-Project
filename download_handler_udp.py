@@ -109,9 +109,7 @@ class downloadHandlerUDP:
 
         #self.self_addr = (socket.gethostbyname(socket.getfqdn()) , settings.port)
         self.self_addr = self_addr
-        # if settings.download_torrentx_encryption:
-
-        if False:
+        if settings.download_torrentx_encryption:
             self.pub_key, self.private_key = encryption.create_key_pairs()
         else:
             self.pub_key, self.private_key = None, None
@@ -182,8 +180,7 @@ class downloadHandlerUDP:
                 if self.piece_handler.downloading:
                     print("gonna request block")
                     await self.request_block()
-                else:
-                    print("marked as none downloading")
+
                 await asyncio.sleep(MAX_TIME_TO_WAIT)
 
 
@@ -211,7 +208,7 @@ class downloadHandlerUDP:
                 addr = connectable.peer_addr
             else:
                 msg = data[0]
-                addr = msg[1]
+                addr = data[1]
 
         except TimeoutError:
             msg = None

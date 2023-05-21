@@ -74,6 +74,9 @@ class downloadHandlerTCP:
         while True:
             self.peer_connections += await self.gather_connectables()
             
+            if self.current_peer is None:
+                self.current_peer = self.get_next_peer()
+
             if self.current_peer is not None:
                 await self.handle_msg(self.current_peer)
 

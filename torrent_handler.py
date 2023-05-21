@@ -32,17 +32,28 @@ class TorrentHandler:
     def get_torrents(self):
         return self.torrent_list
 
+    def update(self):
+        self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
 
     def update_loop(self):
         print("started io thread")
-        while True:
-            # print("updated torrents in db")
-            # self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
-            time.sleep(1)
+        time.sleep(60)
+        self.torrent_db.action_to_db(self.torrent_db.update, *self.torrent_list)
+        print("updated torrents in db")
 
+        while True:
+            time.sleep(60)
+            print("updated torrents in db")
 
 
 
 if __name__ == "__main__":
     torrent_handler = TorrentHandler("torrent.db")
-    print(torrent_handler.get_torrents())
+    torrents = torrent_handler.get_torrents()
+    torrents[0].download_path = "dsf"
+    torrents[0].connection_info.announce_url = "nothing"
+    torrents[0].peers += ["wannasfsd:132434234", "lolrr:1dd23123"]
+
+    torrent_handler.torrent_db.update(torrents[0])
+    print(torrents[0])
+    # torrent_handler.update()

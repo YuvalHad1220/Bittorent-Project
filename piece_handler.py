@@ -13,6 +13,7 @@ class PieceHandler:
         self.save_path.mkdir(exist_ok=True)
         self.downloaded_pieces = bytearray([0]) * len(self.torrent.pieces_hashes_list)
         self.get_existing_pieces()
+        self.torrent.downloaded = self.downloaded_size()
    
     @property
     def downloading(self):
@@ -87,7 +88,6 @@ class PieceHandler:
 
 
     def on_download_finish(self):
-        print("finished downloading")
         self.files_from_pieces()
         self.torrent.connection_info.state = torrent_types.wait_to_finish
 
