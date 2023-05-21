@@ -5,24 +5,32 @@ import encryption
 import os
 from utils import torrent_types
 
-class PieceHandler:
 
+class PieceHandler:
     def __init__(self, torrent: Torrent) -> None:
         self.torrent = torrent
         self.save_path = pathlib.Path(torrent.download_path) / f"{self.torrent.index}Pieces"
         self.save_path.mkdir(exist_ok=True)
         self.downloaded_pieces = bytearray([0]) * len(self.torrent.pieces_hashes_list)
         self.get_existing_pieces()
-
-    
+   
     @property
     def downloading(self):
+        parent_path = self.save_path.parent
+        file_path = self.torrent.files[0].path_name
+        for filename in parent_path.glob("*"):
+            if file_path in filename.as_posix():
+                return False
+
+
         return True if self.torrent.downloaded < self.torrent.size else False
+
 
     def get_existing_pieces(self):
         for filename in self.save_path.glob('*'):
             index, _ = filename.name.split('.')
             self.downloaded_pieces[int(index)] = 1
+
 
     def on_validated_piece(self, validated_piece, piece_index):
         """
@@ -36,6 +44,7 @@ class PieceHandler:
 
         self.torrent.downloaded = self.downloaded_size()
 
+
         if self.torrent.downloaded >= self.torrent.size:
             self.on_download_finish()
 
@@ -44,7 +53,9 @@ class PieceHandler:
         for filename in self.save_path.glob('*'):
             downloaded += os.path.getsize(filename)
 
+
         return downloaded
+
 
     @property
     def needed_piece_to_download_index(self):
@@ -52,12 +63,15 @@ class PieceHandler:
             if piece_downloaded_value == 0:
                 return i
 
+
         return -1
+
 
     def validate_piece(self, piece):
         """
         We will validate the piece against the current index
         """
+
 
         for i, piece_hash in enumerate(self.torrent.pieces_hashes_list):
             sha1 = hashlib.sha1()
@@ -67,13 +81,17 @@ class PieceHandler:
                 print("PIECE EXISTS IN HASH LIST!! GOOD JOB ON GETTING THAT. PIECE INDEX:", i)
                 return True
 
+
         print("piece does not exist")
         return False
+
 
     def on_download_finish(self):
         print("finished downloading")
         self.files_from_pieces()
         self.torrent.connection_info.state = torrent_types.wait_to_finish
+
+
 
 
     def files_from_pieces(self):
@@ -85,19 +103,25 @@ class PieceHandler:
                     with open(self.save_path / (str(i) + '.piece'), 'rb') as piece_file:
                         f.write(piece_file.read())
 
+
     def return_block(self, piece_index, block_offset, block_length, public_key=None):
-        with open(self.torrent.download_path, 'rb') as f:
+        torrent_file_path = pathlib.Path(self.torrent.download_path) / self.torrent.files[0].path_name
+
+
+        with open(torrent_file_path, 'rb') as f:
             byte_pos = piece_index * self.torrent.piece_size_in_bytes + block_offset
             f.seek(byte_pos)
             # Read the requested block
             block_data = f.read(block_length)
 
+
         if not public_key:
             return block_data
 
+
         return encryption.encrypt_using_public(block_data, public_key)
-    
-    
+   
+   
     def get_hash(self, piece_index, block_offset, block_length):
         with open(self.torrent.download_path, 'rb') as f:
             byte_pos = piece_index * self.torrent.piece_size_in_bytes + block_offset
@@ -105,4 +129,7 @@ class PieceHandler:
             # Read the requested block
             block_data = f.read(block_length)
 
+
         return hashlib.sha1(block_data).digest()
+
+
