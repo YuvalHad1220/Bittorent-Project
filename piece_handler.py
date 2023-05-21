@@ -14,6 +14,7 @@ class PieceHandler:
         self.downloaded_pieces = bytearray([0]) * len(self.torrent.pieces_hashes_list)
         self.get_existing_pieces()
         self.torrent.downloaded = self.downloaded_size()
+
    
     @property
     def downloading(self):
@@ -45,15 +46,18 @@ class PieceHandler:
 
         self.torrent.downloaded = self.downloaded_size()
 
-
-        if self.torrent.downloaded >= self.torrent.size:
+        if self.torrent.downloaded >= self.torrent.size or piece_index == len(self.torrent.pieces_hashes_list) - 1:
             self.on_download_finish()
 
     def downloaded_size(self):
+        torrent_file_path = pathlib.Path(self.torrent.download_path) / self.torrent.files[0].path_name
+
+        if torrent_file_path.exists():
+            return self.torrent.size
+
         downloaded = 0
         for filename in self.save_path.glob('*'):
             downloaded += os.path.getsize(filename)
-
 
         return downloaded
 
@@ -98,10 +102,14 @@ class PieceHandler:
         for file_obj in self.torrent.files:
             file_path = pathlib.Path(self.save_path).parent / file_obj.path_name
             # file_path.mkdir(exist_ok=True)
-            with open(file_path, 'wb') as f:
-                for i in range(file_obj.first_piece_index, file_obj.last_piece_index):
-                    with open(self.save_path / (str(i) + '.piece'), 'rb') as piece_file:
-                        f.write(piece_file.read())
+            try:
+                with open(file_path, 'wb') as f:
+                    for i in range(file_obj.first_piece_index, file_obj.last_piece_index):
+                        with open(self.save_path / (str(i) + '.piece'), 'rb') as piece_file:
+                            f.write(piece_file.read())
+
+            except Exception:
+                pass
 
 
     def return_block(self, piece_index, block_offset, block_length, public_key=None):

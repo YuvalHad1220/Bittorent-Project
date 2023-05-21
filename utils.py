@@ -158,58 +158,47 @@ def print_bytes_as_bits(bytes_arr):
 
 def get_item_hash(full_directory_to_item, piece_length):
     hashes = b''
-    sha1 = hashlib.sha1()
     with open(full_directory_to_item, "rb") as f:
         while True:
             piece_content = f.read(piece_length)
-            if piece_content == None:
+            if not piece_content:
                 return hashes
             
             hashes += hashlib.sha1(piece_content).digest()
-            
-
 
 
 def create_torrent_file_from_directory(piece_size, root_path, torrent_name, comments=None, trackers = None):
     # Create a list to hold the file dictionaries
     files = []
     pieces_list = []
-    # Get the root directory name
-    root_dirname = os.path.basename(root_path)
-    # Iterate over each file in the root directory
-    for dirpath, dirnames, filenames in os.walk(root_path):
-        # Create a list to hold the file dictionaries for this directory
-        dir_files = []
-        # Iterate over each file in the directory
-        for filename in filenames:
-            # Get the full path to the file
-            filepath = os.path.join(dirpath, filename)
-            # Get the file size
-            filesize = os.path.getsize(filepath)
-            # Calculate the SHA1 hash of the file
-            # Add the file dictionary to the list
-            dir_files.append({
-                "path": [os.path.relpath(filepath, root_path)],
-                "length": filesize,
-            })
-            pieces_list.append(get_item_hash(filepath, piece_size))
-        # Add the directory dictionary to the files list
-        if dir_files:
-            files.append({
-                "path": [os.path.relpath(dirpath, root_path)],
-                "files": dir_files
-            })
+
+    root_path = pathlib.Path(root_path)
+
+    for item in root_path.iterdir():
+        file_size = os.path.getsize(item)
+        files.append({
+            "path": [os.path.relpath(item, root_path)],
+            "length": file_size
+        })
+
+        pieces_list.append(get_item_hash(item, piece_size))
+
     # Create the main dictionary
+    length = [file["length"] for file in files]
+    length = sum(length)
     torrent = {
         "info": {
-            "name": root_dirname,
+            "name": root_path.as_posix(),
             "piece length": piece_size,
             "files": files,
-            "pieces": b''.join(pieces_list),
+            "length": length
         },
         "creation date": int(time.time()),
         "created by": "bitTorrentX/0.1b",
     }
+    print(torrent)
+
+    torrent["info"]["pieces"] = b''.join(pieces_list)
     if trackers:
         torrent["info"]["announce"] = trackers
     if comments:
@@ -224,6 +213,9 @@ def create_torrent_file_from_directory(piece_size, root_path, torrent_name, comm
     response.headers.set('Content-Disposition', 'attachment', filename=f"{torrent_name}.torrent")
 
     return response
+
+if __name__ == "__main__":
+    create_torrent_file_from_directory(1200, r"C:\Users\Yuval Hadar\Documents\1Pieces", "test.torrent")
 
 
 def create_torrent_file_from_single_file(piece_size, root_path, torrent_name, comments=None, trackers = None):

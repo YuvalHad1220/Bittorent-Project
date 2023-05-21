@@ -86,6 +86,7 @@ def create_files_path(info_decoded, piece_size) -> List[File]:
     file_list = []
     i = 0
     for entry in info_decoded[b'files']:
+        print(entry)
         path = b'/'.join(entry[b'path']).decode()
         size = entry[b'length']
         piece_start_index = i

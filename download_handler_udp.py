@@ -19,7 +19,7 @@ TYPES = {
     "HASH": 3
 }
 # self_addr = (socket.gethostbyname(socket.getfqdn()) , settings.port)
-self_addr = ("192.168.1.37", 25565)
+self_addr = ("192.168.1.41", 25565)
 
 
 def parse_request(payload):
@@ -130,6 +130,7 @@ class downloadHandlerUDP:
         print("started connection as server")
         while True:
             self.peer_connections += await self.gather_connectables()
+            self.torrent.connection_info.connected_seeders = len(self.peer_connections)
             try:
                 msg, addr = await asyncio.wait_for(self.conn_as_server.receive(), MAX_TIME_TO_WAIT)
             except TimeoutError:
@@ -151,7 +152,6 @@ class downloadHandlerUDP:
                         if msg[4] == 3:
                             await self.on_hash_request(msg, addr)
                         else:
-                            print(msg[4])
                             msg_length, trans_id, msg_type, piece_index, block_offset, block_length = parse_request(msg)
                             if msg_type == 1:
                                 await self.on_block_request(connectable, addr, trans_id, piece_index, block_offset,
@@ -180,7 +180,8 @@ class downloadHandlerUDP:
                 if self.piece_handler.downloading:
                     print("gonna request block")
                     await self.request_block()
-
+                else:
+                    print("marked as none downloading")
                 await asyncio.sleep(MAX_TIME_TO_WAIT)
 
 
@@ -245,7 +246,7 @@ class downloadHandlerUDP:
         await self.conn_as_server.drain()
         connectable = connectableUDP(addr, self.conn_as_server, trans_id, peer_pub_key)
         self.peer_connections.append(connectable)
-
+        self.torrent.connection_info.connected_leechers += 1
         print("handshake with ", addr, "complete")
 
     async def on_block_request(self, connectable, addr, trans_id, piece_index, block_offset, block_length):

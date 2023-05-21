@@ -81,19 +81,18 @@ class downloadHandlerTCP:
                 await self.handle_msg(self.current_peer)
 
                 if self.piece_handler.downloading:
-                    if self.loops_until_answer > 60:
+                    if self.loops_until_answer > 30:
                         if self.piece_handler.needed_piece_to_download_index == len(self.torrent.pieces_hashes_list) - 1:
                             print("thinking we got no response because we finished downloading")
-                            # for i in range(len(self.current_piece_data)):
-                            #     if self.piece_handler.validate_piece(self.current_piece_data[:self.block_offset]):
-                            #         self.piece_handler.on_validated_piece(self.current_piece_data[:self.block_offset], self.piece_handler.needed_piece_to_download_index)
-                            #         import sys
-                            #         sys.exit(2)
-                        print("peer probably hanged on us, going to next peer and resetting stats")
-                        self.current_peer = self.get_next_peer()
-                        self.loops_until_answer = 0
-                        self.pending = False
+                            self.piece_handler.on_validated_piece(self.current_piece_data[:self.block_offset], self.piece_handler.needed_piece_to_download_index)
+                        else:
+                            print("peer probably hanged on us, going to next peer and resetting stats")
+                            self.current_peer = self.get_next_peer()
+                            self.loops_until_answer = 0
+                            self.pending = False
 
+                else:
+                    self.torrent.connection_info.state = "FINISHED"
                     self.loops_until_answer += 1
                     if not self.pending:
                         await self.request_block(self.piece_handler.needed_piece_to_download_index, self.block_offset)
@@ -267,7 +266,7 @@ async def __run(tasks):
 
 if __name__ == "__main__":
     
-    torrent_handler = TorrentHandler("./database/torrent.db")
+    torrent_handler = TorrentHandler("torrent.db")
     from trakcer_announce_handler import main_loop as announce_main_loop
 
     settings = read_settings_file("./settings/settings.json")
