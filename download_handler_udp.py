@@ -109,9 +109,7 @@ class downloadHandlerUDP:
 
         #self.self_addr = (socket.gethostbyname(socket.getfqdn()) , settings.port)
         self.self_addr = self_addr
-        # if settings.download_torrentx_encryption:
-
-        if False:
+        if settings.download_torrentx_encryption:
             self.pub_key, self.private_key = encryption.create_key_pairs()
         else:
             self.pub_key, self.private_key = None, None
@@ -132,6 +130,7 @@ class downloadHandlerUDP:
         print("started connection as server")
         while True:
             self.peer_connections += await self.gather_connectables()
+            self.torrent.connection_info.connected_seeders = len(self.peer_connections)
             try:
                 msg, addr = await asyncio.wait_for(self.conn_as_server.receive(), MAX_TIME_TO_WAIT)
             except TimeoutError:
@@ -245,7 +244,7 @@ class downloadHandlerUDP:
         await self.conn_as_server.drain()
         connectable = connectableUDP(addr, self.conn_as_server, trans_id, peer_pub_key)
         self.peer_connections.append(connectable)
-
+        self.torrent.connection_info.connected_leechers += 1
         print("handshake with ", addr, "complete")
 
     async def on_block_request(self, connectable, addr, trans_id, piece_index, block_offset, block_length):

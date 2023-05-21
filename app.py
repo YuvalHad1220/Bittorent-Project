@@ -49,6 +49,7 @@ def ret_torrent_list():
 @app.route("/create_torrentx", methods=["GET", "POST"])
 def create_torrentx():
     if request.method == "POST":
+        print("got post")
         return return_torrent_file(request)
         
 
