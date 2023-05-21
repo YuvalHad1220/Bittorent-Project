@@ -13,6 +13,8 @@ class PieceHandler:
         self.save_path.mkdir(exist_ok=True)
         self.downloaded_pieces = bytearray([0]) * len(self.torrent.pieces_hashes_list)
         self.get_existing_pieces()
+        self.torrent.downloaded = self.downloaded_size()
+
    
     @property
     def downloading(self):
@@ -49,11 +51,15 @@ class PieceHandler:
             self.on_download_finish()
 
     def downloaded_size(self):
+        torrent_file_path = pathlib.Path(self.torrent.download_path) / self.torrent.files[0].path_name
+
+        if torrent_file_path.exists():
+            return self.torrent.size
+
         downloaded = 0
         for filename in self.save_path.glob('*'):
             downloaded += os.path.getsize(filename)
-
-
+            
         return downloaded
 
 

@@ -19,7 +19,7 @@ TYPES = {
     "HASH": 3
 }
 # self_addr = (socket.gethostbyname(socket.getfqdn()) , settings.port)
-self_addr = ("192.168.1.37", 25565)
+self_addr = ("192.168.1.41", 25565)
 
 
 def parse_request(payload):
@@ -153,7 +153,6 @@ class downloadHandlerUDP:
                         if msg[4] == 3:
                             await self.on_hash_request(msg, addr)
                         else:
-                            print(msg[4])
                             msg_length, trans_id, msg_type, piece_index, block_offset, block_length = parse_request(msg)
                             if msg_type == 1:
                                 await self.on_block_request(connectable, addr, trans_id, piece_index, block_offset,
@@ -182,8 +181,6 @@ class downloadHandlerUDP:
                 if self.piece_handler.downloading:
                     print("gonna request block")
                     await self.request_block()
-                else:
-                    print("marked as none downloading")
                 await asyncio.sleep(MAX_TIME_TO_WAIT)
 
 
@@ -211,7 +208,7 @@ class downloadHandlerUDP:
                 addr = connectable.peer_addr
             else:
                 msg = data[0]
-                addr = msg[1]
+                addr = data[1]
 
         except TimeoutError:
             msg = None
